@@ -216,29 +216,62 @@ NetworkManager enablement, also run `systemctl disable systemd-networkd
 systemd-networkd.socket systemd-networkd-wait-online` and drop the
 `timesyncd.conf.d` file above, so future images avoid this out of the box.
 
-### WiFi instability (brcmfmac power save)
+### WiFi instability (brcmfmac)
 
 **Symptom**: WiFi occasionally drops; reconnecting via `nmcli` restores it.
 
-**Root cause**: the `brcmfmac` driver (CM4 onboard WiFi) has power saving
-enabled by default (`Power save: on`). In this state the driver occasionally
-puts the chip to sleep and fails to recover, requiring a manual reconnect.
+The `brcmfmac` driver (CM4 onboard WiFi) wedges in at least two distinct ways.
+Both leave the link dead until a manual reconnect, so the image now ships both a
+preventive fix (power save off) and a recovery net (a watchdog).
 
-**Fix (on device)**: disable power save permanently via NetworkManager.
+**Cause 1 — power save.** `brcmfmac` ships with power saving on (`Power save:
+on`); in this state it occasionally puts the chip to sleep and fails to wake.
+
+Fix — disable power save permanently via NetworkManager:
 
 ```sh
-# Immediate (until reboot)
-sudo iw dev wlan0 set power_save off
-
-# Permanent (applies to all connections, current and future)
-sudo tee /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'EOF'
+sudo iw dev wlan0 set power_save off            # immediate, until reboot
+sudo tee /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'EOF'  # permanent
 [connection]
 wifi.powersave=2
 EOF
 ```
 
-**Fixed in the image**: `scripts/customize.sh` writes the config file above
-at build time, so fresh images ship with WiFi power saving disabled.
+**Cause 2 — a failed roam.** On a WPA2/WPA3-transition, band-steering AP (one
+SSID, several BSSIDs across 2.4/5 GHz), NetworkManager's background scan
+(`bgscan simple:30:-65:300`) roams to another BSSID, and `brcmfmac` fails SAE
+external auth on the transition BSSID:
+
+```
+kernel: brcmf_cfg80211_external_auth: External authentication failed: status=1
+```
+
+The link then dies (or stays "connected" while passing no traffic) until a
+manual `nmcli` reconnect. Power save is already off, so this is a separate bug.
+
+Fix — cut the failing roam by pinning the band (per-connection, on device), and
+rely on the watchdog below to auto-recover the residual cases:
+
+```sh
+# Lock this connection to 5 GHz so cross-band steering can't trigger the roam.
+sudo nmcli connection modify <SSID> 802-11-wireless.band a
+sudo nmcli connection up <SSID>
+# (Optional, most aggressive: pin one AP outright)
+#   sudo nmcli connection modify <SSID> 802-11-wireless.bssid AA:BB:CC:DD:EE:FF
+```
+
+The band pin is network-specific (it names your SSID/band), so it stays a
+per-device tweak, not an image default.
+
+**Fixed in the image**:
+- `scripts/customize.sh` writes the power-save config above at build time.
+- It also installs a **WiFi recovery watchdog** — `/usr/local/sbin/uconsole-wifi-watchdog`
+  driven by `uconsole-wifi-watchdog.timer` (every 30 s). If `wlan0` is
+  `disconnected`, or `connected` but the default gateway is unreachable across
+  two probes, it forces a NetworkManager reconnect. It only acts when an
+  autoconnect wifi profile exists (never fights a deliberate disconnect) and
+  uses only NetworkManager + iproute2 + iputils (all already in the base).
+  Inspect with `journalctl -t uconsole-wifi-watchdog`.
 
 ## Future directions
 

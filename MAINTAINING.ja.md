@@ -203,29 +203,62 @@ timedatectl timesync-status   # ServerName=ntp.nict.jp / synced になれば OK
 systemd-networkd-wait-online` を実行し、上記 `timesyncd.conf.d` を配置しておけば、
 以降のイメージはこの問題を最初から回避できる。
 
-### WiFi 不安定（brcmfmac パワーセーブ）
+### WiFi 不安定（brcmfmac）
 
 **症状**: WiFi が稀に切断される。`nmcli` で再接続すると復旧する。
 
-**原因**: `brcmfmac` ドライバ（CM4 内蔵 WiFi）のデフォルトで省電力
-モード（`Power save: on`）が有効になっており、省電力状態でチップが
-スリープに入り、復帰に失敗して再接続が必要になる。
+`brcmfmac`（CM4 内蔵 WiFi）は少なくとも2種類の理由でハングする。いずれも
+手動再接続まで復帰しないため、イメージには予防策（パワーセーブ無効）と
+復旧策（ウォッチドッグ）の両方を入れている。
 
-**対処（実機）**: NetworkManager でパワーセーブを恒久無効化する。
+**原因1 — パワーセーブ。** `brcmfmac` はデフォルトで省電力（`Power save:
+on`）。この状態でチップがスリープに入り、復帰に失敗することがある。
+
+対処 — NetworkManager でパワーセーブを恒久無効化:
 
 ```sh
-# 即時（再起動まで有効）
-sudo iw dev wlan0 set power_save off
-
-# 恒久（現在・将来の全接続に適用）
-sudo tee /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'EOF'
+sudo iw dev wlan0 set power_save off            # 即時（再起動まで）
+sudo tee /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'EOF'  # 恒久
 [connection]
 wifi.powersave=2
 EOF
 ```
 
-**イメージ側で根治済み**: `scripts/customize.sh` がビルド時に上記の
-設定ファイルを書き込むため、新規イメージでは最初から無効化されている。
+**原因2 — ローミング失敗。** WPA2/WPA3 transition かつ band-steering の AP
+（1 SSID・2.4/5GHz に複数 BSSID）では、NetworkManager のバックグラウンド
+スキャン（`bgscan simple:30:-65:300`）が別 BSSID へローミングし、transition
+BSSID で `brcmfmac` が SAE 外部認証に失敗する:
+
+```
+kernel: brcmf_cfg80211_external_auth: External authentication failed: status=1
+```
+
+その後リンクが死ぬ（または "connected" のまま無通信になる）まで手動再接続が
+必要になる。パワーセーブは無効なので、これは別バグ。
+
+対処 — バンド固定でローミング自体を止め（実機・接続ごと）、残るケースは
+下記ウォッチドッグで自動復旧させる:
+
+```sh
+# この接続を 5GHz に固定し、cross-band steering を封じる
+sudo nmcli connection modify <SSID> 802-11-wireless.band a
+sudo nmcli connection up <SSID>
+# （任意・最も強力: AP を1台に固定）
+#   sudo nmcli connection modify <SSID> 802-11-wireless.bssid AA:BB:CC:DD:EE:FF
+```
+
+バンド固定は SSID/バンドに依存するネットワーク固有設定なので、イメージ
+デフォルトではなく実機ごとの調整として残す。
+
+**イメージ側で根治済み**:
+- `scripts/customize.sh` がビルド時に上記パワーセーブ設定を書き込む。
+- 併せて **WiFi 復旧ウォッチドッグ** を導入 —
+  `/usr/local/sbin/uconsole-wifi-watchdog` を `uconsole-wifi-watchdog.timer`
+  （30秒毎）で駆動。`wlan0` が `disconnected`、または `connected` でも
+  デフォルトゲートウェイに2回連続到達不可なら、NetworkManager 再接続を強制
+  する。autoconnect な wifi プロファイルが存在する時だけ動作（意図的な切断
+  とは競合しない）。依存は NetworkManager + iproute2 + iputils のみ（すべて
+  base に同梱）。ログは `journalctl -t uconsole-wifi-watchdog` で確認。
 
 ## 今後の方向性
 

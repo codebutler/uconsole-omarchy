@@ -166,6 +166,86 @@ cat > /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'EOF'
 wifi.powersave=2
 EOF
 
+# WiFi recovery watchdog: power save is not the only way the brcmfmac link
+# wedges. On WPA2/WPA3-transition, band-steering APs a background-scan roam to
+# another BSSID can fail SAE external auth (kernel: "brcmf_cfg80211_external_auth:
+# External authentication failed"), and the driver sometimes stays "connected"
+# while passing no traffic -- in both cases WiFi is dead until a manual `nmcli`
+# reconnect. A 30s timer detects the wedged state and forces NetworkManager to
+# reconnect wlan0, so the link self-heals. Uses only NetworkManager + iproute2 +
+# iputils (all already present). See MAINTAINING "WiFi instability".
+echo "==> [chroot] installing WiFi recovery watchdog (systemd timer)"
+mkdir -p /usr/local/sbin
+cat > /usr/local/sbin/uconsole-wifi-watchdog <<'WD'
+#!/usr/bin/env bash
+# Recover the CM4 onboard brcmfmac WiFi when it wedges (see customize.sh).
+set -u
+IFACE=wlan0
+
+# Nothing to do if the interface is absent or the radio is switched off.
+[[ -e "/sys/class/net/${IFACE}" ]] || exit 0
+[[ "$(nmcli -t -f WIFI radio 2>/dev/null)" == enabled ]] || exit 0
+
+# Only manage the link if an autoconnectable wifi profile exists, so we never
+# fight a user who deliberately disconnected.
+if ! nmcli -t -f TYPE,AUTOCONNECT connection show 2>/dev/null \
+    | grep -q '^802-11-wireless:yes'; then
+  exit 0
+fi
+
+state=$(nmcli -t -f DEVICE,STATE device 2>/dev/null \
+  | awk -F: -v i="$IFACE" '$1==i{print $2}')
+
+case "${state}" in
+  connected)
+    # L2 is up; confirm L3 by pinging the default gateway (LAN-local, cheap). A
+    # wedged brcmfmac often stays "connected" while passing no traffic. Require
+    # two failed probes a few seconds apart to avoid acting on a single loss.
+    gw=$(ip -4 route show default dev "${IFACE}" 2>/dev/null | awk '{print $3; exit}')
+    [[ -n "${gw}" ]] || exit 0
+    ping -c1 -W2 -I "${IFACE}" "${gw}" >/dev/null 2>&1 && exit 0
+    sleep 3
+    ping -c2 -W2 -I "${IFACE}" "${gw}" >/dev/null 2>&1 && exit 0
+    logger -t uconsole-wifi-watchdog "gateway ${gw} unreachable; reconnecting ${IFACE}"
+    nmcli device reconnect "${IFACE}" >/dev/null 2>&1 || true
+    ;;
+  disconnected)
+    # NM failed to recover on its own; force a reconnect to the best BSSID.
+    logger -t uconsole-wifi-watchdog "device ${IFACE} disconnected; forcing connect"
+    nmcli device connect "${IFACE}" >/dev/null 2>&1 || true
+    ;;
+  *)
+    # connecting / unavailable / unmanaged: an attempt is in progress or the
+    # device is not ours to touch -- leave it alone.
+    exit 0
+    ;;
+esac
+WD
+chmod +x /usr/local/sbin/uconsole-wifi-watchdog
+cat > /etc/systemd/system/uconsole-wifi-watchdog.service <<'UNIT'
+[Unit]
+Description=uConsole WiFi recovery watchdog (recover wedged brcmfmac link)
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/uconsole-wifi-watchdog
+UNIT
+cat > /etc/systemd/system/uconsole-wifi-watchdog.timer <<'UNIT'
+[Unit]
+Description=Run the uConsole WiFi recovery watchdog periodically
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=30
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl enable uconsole-wifi-watchdog.timer || true
+
 # --- Internal speaker amplifier enable -------------------------------
 # The uConsole's onboard speaker amplifier is gated by an enable GPIO
 # (BCM11 / gpiochip0 line 11). Headphones bypass the amp, so without this the
