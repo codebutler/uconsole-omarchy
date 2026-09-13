@@ -1,0 +1,69 @@
+README.md
+  s_c1cdd513fdf33e::t_dd8a759ce8daf2 73-91
+  s_9a4d7e5255981d::t_07d97922831472 111-114
+  s_9a4d7e5255981d::t_944fd727a06a8e 99,256
+  s_c1cdd513fdf33e::t_46e96df1477cce 122-193,232-235,259
+scripts/build-packages.sh
+  s_9a4d7e5255981d::t_07d97922831472 47-53
+packages/openterfaceqt/openterfaceqt.desktop
+  s_9a4d7e5255981d::t_07d97922831472 1-4,6-11
+  s_9a4d7e5255981d::t_5ae28fb1b220ef 5
+packages/openterfaceqt/system-theme.patch
+  s_9a4d7e5255981d::t_4e3c4597e4e31f 1-30
+packages/openterfaceqt/prefer-wayland.patch
+  s_9a4d7e5255981d::t_f6ac6e76f4e1a1 1-19
+tests/test-platform.py
+  s_9a4d7e5255981d::t_9f14342de56fd6 24-25
+  s_9a4d7e5255981d::t_5ae28fb1b220ef 43
+  s_9a4d7e5255981d::t_0fc244aaf87bfc 3,29-30,32
+  s_9a4d7e5255981d::t_07d97922831472 19,23,26-28,38-42
+  s_9a4d7e5255981d::t_6e7f906929b3d1 18,20-22,44-55
+  s_9a4d7e5255981d::t_c0bdb1ba9b4284 31,33-37
+packages/openterfaceqt/70-openterfaceqt.rules
+  s_9a4d7e5255981d::t_07d97922831472 1-15
+scripts/verify-image.sh
+  s_9a4d7e5255981d::t_07d97922831472 37,41-42
+  s_9a4d7e5255981d::t_944fd727a06a8e 40,43-44
+scripts/customize.sh
+  s_9a4d7e5255981d::t_07d97922831472 70
+  s_9a4d7e5255981d::t_0fc244aaf87bfc 63,68
+packages/openterfaceqt/PKGBUILD
+  s_9a4d7e5255981d::t_2e4df6adccb518 36
+  s_9a4d7e5255981d::t_0fc244aaf87bfc 21,24
+  s_9a4d7e5255981d::t_df2d432cac26ce 35
+  s_9a4d7e5255981d::t_c0bdb1ba9b4284 4,19,22,25,29
+  s_9a4d7e5255981d::t_4b38039c16ab7b 23
+  s_9a4d7e5255981d::t_07d97922831472 1-3,5-17,31-34,37-52
+  s_9a4d7e5255981d::t_2594584e9401aa 18,20,26-28,30
+packages/openterfaceqt/README.md
+  s_9a4d7e5255981d::t_5ae28fb1b220ef 12-13,26-30,33
+  s_9a4d7e5255981d::t_2594584e9401aa 6-8
+  s_9a4d7e5255981d::t_4e3c4597e4e31f 16-21
+  s_9a4d7e5255981d::t_07d97922831472 1-5,9-11,14-15,22-25,31-32,34-39
+CLAUDE.md
+  s_c1cdd513fdf33e::t_f5b5aaece0c9c9 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "dbca105273fb41e14c2564c49c01949994a5a0f0",
+  "prompts": {},
+  "sessions": {
+    "s_9a4d7e5255981d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07756-b9d9-7a11-b75a-69e2a8957111",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Eric Butler <eric@codebutler.com>"
+    },
+    "s_c1cdd513fdf33e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a09ba0-1f64-7b33-9a97-966fd93ac122",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Eric Butler <eric@codebutler.com>"
+    }
+  }
+}
