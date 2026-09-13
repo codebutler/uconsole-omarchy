@@ -1,0 +1,48 @@
+README.md
+  s_9a4d7e5255981d::t_aa50a3eff27338 165-168
+packages/uconsole-platform/rootfs/usr/bin/uconsole-configure-omarchy-display
+  s_9a4d7e5255981d::t_5caa873513a2d7 9,12,22,29-41
+tests/test-platform.py
+  s_9a4d7e5255981d::t_26102ddea57d8a 36-74
+  s_9a4d7e5255981d::t_aa50a3eff27338 18-35
+  s_9a4d7e5255981d::t_5160b254a214b3 75-105
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/sddm-hyprland.lua
+  s_9a4d7e5255981d::t_39adf4aea6dbe2 3-4
+scripts/verify-image.sh
+  s_9a4d7e5255981d::t_26102ddea57d8a 52-53
+  s_9a4d7e5255981d::t_aa50a3eff27338 62
+  s_9a4d7e5255981d::t_1a46aa22884cdd 99-107
+packages/uconsole-platform/rootfs/usr/bin/uconsole-configure-handheld-user
+  s_9a4d7e5255981d::t_aa50a3eff27338 20-22
+packages/uconsole-platform/PKGBUILD
+  s_9a4d7e5255981d::t_39adf4aea6dbe2 4
+packages/uconsole-platform/rootfs/etc/systemd/system/plymouth-quit.service.d/retain-splash.conf
+  s_9a4d7e5255981d::t_39adf4aea6dbe2 1-4
+packages/uconsole-platform/rootfs/usr/lib/uconsole/plymouth-progress
+  s_9a4d7e5255981d::t_39adf4aea6dbe2 1-27
+packages/uconsole-platform/rootfs/etc/mkinitcpio.conf.d/zz-uconsole.conf
+  s_9a4d7e5255981d::t_39adf4aea6dbe2 10
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/sddm-power-controls.qml
+  s_9a4d7e5255981d::t_5caa873513a2d7 1-115
+MAINTAINING.md
+  s_9a4d7e5255981d::t_5160b254a214b3 55-63
+  s_9a4d7e5255981d::t_26102ddea57d8a 64-70
+packages/uconsole-platform/rootfs/usr/lib/initcpio/install/uconsole-plymouth
+  s_9a4d7e5255981d::t_39adf4aea6dbe2 1-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c9343315e27c66b9841a93e6003e34aa4f289a0f",
+  "prompts": {},
+  "sessions": {
+    "s_9a4d7e5255981d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07756-b9d9-7a11-b75a-69e2a8957111",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Eric Butler <eric@codebutler.com>"
+    }
+  }
+}
