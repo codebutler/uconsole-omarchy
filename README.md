@@ -162,6 +162,10 @@ brightness on activity. It respects idle inhibitors and the stay-awake toggle;
 this is dimming, not suspend. It also avoids waking a manually darkened panel or
 overwriting brightness changes made while dimmed.
 
+Suspend is hidden from the desktop power menu using Omarchy's native
+`suspend-off` toggle because the image has no tested suspend path. This only
+changes menu visibility; it does not disable systemd sleep commands.
+
 The battery udev rule sets total charge current and the driver ceiling to
 **1.5 A** at boot. This is below the Samsung INR18650-35E's 1.7 A standard and
 2.0 A maximum per-cell charging rates, even with one cell installed. Other cell

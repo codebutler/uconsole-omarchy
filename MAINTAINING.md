@@ -52,6 +52,22 @@ backups. It refuses unknown source layouts. The user look-and-feel template size
 floating dialogs relative to the logical monitor and keeps normal terminals tiled.
 Keep the bar's monitor scale unchanged when adjusting these content dimensions.
 
+The `uconsole-plymouth` mkinitcpio build hook runs after `plymouth`, adapting
+only the initramfs copy of Omarchy's current theme so its progress bar does not
+require a disk-unlock prompt. It uses Plymouth's estimated boot progress, not
+a timer pretending to measure completion. Unknown upstream script layouts fail
+the build. Colors, assets and password prompts remain upstream-owned.
+Plymouth exits with `--retain-splash` while preserving normal SDDM ordering;
+the greeter compositor disables its unused XWayland server. Retaining a frame
+does not guarantee a zero-black-frame transition when DRM ownership changes.
+
+The display adapter adds keyboard-accessible Restart/Shut down buttons to both
+Omarchy's packaged SDDM template and its installed theme. Updating the template
+preserves the controls across subsequent `omarchy-plymouth-set` theme refreshes;
+the package hook reapplies them after upgrades. Actions use SDDM's capability
+checks and require confirmation with Cancel focused by default. No suspend
+action is exposed. Do not invoke real power actions during UI tests.
+
 Audio requires `pipewire-audio`, `pipewire-alsa`, `pipewire-pulse`, and WirePlumber,
 not just the base PipeWire daemon. The ALSA and Bluetooth SPA plugins live in
 `pipewire-audio`; without it the kernel can expose sound cards while the desktop

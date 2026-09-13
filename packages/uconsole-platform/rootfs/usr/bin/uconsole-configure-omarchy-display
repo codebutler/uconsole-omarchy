@@ -6,9 +6,10 @@ import shutil
 ROOT = Path("/usr/share/omarchy")
 BACKUPS = Path("/var/lib/uconsole/omarchy-display-upstream")
 RESOURCES = Path("/usr/share/uconsole/omarchy")
+SDDM_THEME = Path("/usr/share/sddm/themes/omarchy/Main.qml")
 
 
-def adapt(path, replacements):
+def adapt(path, replacements, backup_name=None):
     original = path.read_text()
     updated = original
     for before, after in replacements:
@@ -18,13 +19,26 @@ def adapt(path, replacements):
             raise RuntimeError(f"Upstream changed; refusing to patch {path}: {before!r}")
         updated = updated.replace(before, after, 1)
     if updated != original:
-        backup = BACKUPS / path.relative_to(ROOT)
+        backup = BACKUPS / (backup_name if backup_name is not None else path.relative_to(ROOT))
         backup.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, backup)
         path.write_text(updated)
 
 
 def main():
+    for theme, backup_name in ((ROOT / "default/sddm/omarchy/Main.qml", None),
+                               (SDDM_THEME, Path("installed-sddm/Main.qml"))):
+        if theme.exists():
+            controls = (RESOURCES / "sddm-power-controls.qml").read_text()
+            adapt(theme, [
+                ("import QtQuick 2.0\n", "import QtQuick 2.0\nimport QtQuick.Controls 2.0 as Controls\n"),
+                ("          id: password\n", '          id: password\n'
+                 '          activeFocusOnTab: true\n'
+                 '          enabled: root.uconsolePowerAction === ""\n'
+                 '          KeyNavigation.tab: restartPower.enabled ? restartPower : shutdownPower\n'),
+                ("  Component.onCompleted: password.forceActiveFocus()",
+                 controls + "\n  Component.onCompleted: password.forceActiveFocus()"),
+            ], backup_name)
     gnome_theme = ROOT / "bin/omarchy-theme-set-gnome"
     if gnome_theme.exists():
         adapt(gnome_theme, [("# Change gnome icon theme color\n",

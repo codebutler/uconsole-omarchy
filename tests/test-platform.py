@@ -15,6 +15,94 @@ PLATFORM = ROOT / "packages/uconsole-platform/rootfs"
 
 
 class PlatformTests(unittest.TestCase):
+    def test_handheld_defaults_hide_suspend_with_native_toggle(self):
+        module = runpy.run_path(str(PLATFORM / "usr/bin/uconsole-configure-handheld-user"))
+        config = self.root / ".config/mpv/mpv.conf"
+        config.parent.mkdir(parents=True)
+        config.write_text("volume=35\n")
+        with mock.patch("sys.argv", ["uconsole-configure-handheld-user"]), \
+             mock.patch.object(Path, "home", return_value=self.root), \
+             mock.patch.object(subprocess, "run") as run:
+            module["main"]()
+            first = config.read_text()
+            module["main"]()
+            self.assertEqual(config.read_text(), first)
+            self.assertTrue(first.endswith("volume=35\n"))
+            self.assertEqual(run.call_args_list, [
+                mock.call(["omarchy-toggle", "suspend-off", "on"], check=True),
+                mock.call(["omarchy-toggle", "suspend-off", "on"], check=True),
+            ])
+
+    def test_sddm_power_controls_preserve_theme_and_survive_refresh(self):
+        module = runpy.run_path(str(PLATFORM / "usr/bin/uconsole-configure-omarchy-display"))
+        main = module["main"]
+        main.__globals__.update(ROOT=self.root, BACKUPS=self.root / "backups",
+                               RESOURCES=PLATFORM / "usr/share/uconsole/omarchy",
+                               SDDM_THEME=self.root / "installed/Main.qml")
+        themes = [self.root / "default/sddm/omarchy/Main.qml", self.root / "installed/Main.qml"]
+        original = '''import QtQuick 2.0
+Rectangle {
+  color: "#123456"
+  TextInput {
+          id: password
+  }
+  Component.onCompleted: password.forceActiveFocus()
+}
+'''
+        for theme in themes:
+            theme.parent.mkdir(parents=True)
+            theme.write_text(original)
+        main()
+        first = themes[0].read_text()
+        main()
+        self.assertEqual(themes[0].read_text(), first)
+        self.assertEqual(themes[1].read_text(), first)
+        self.assertIn('color: "#123456"', first)
+        self.assertIn('cancelPower.forceActiveFocus()', first)
+        self.assertIn('Keys.onEscapePressed: root.cancelPowerRequest()', first)
+        self.assertIn('enabled: sddm.canReboot', first)
+        self.assertIn('enabled: sddm.canPowerOff', first)
+        self.assertEqual(first.count('sddm.reboot()'), 1)
+        self.assertEqual(first.count('sddm.powerOff()'), 1)
+        self.assertNotIn('sddm.suspend()', first)
+        themes[1].write_text(original)  # Simulate refreshing the installed theme.
+        main()
+        self.assertEqual(themes[1].read_text(), first)
+        themes[0].write_text('unknown upstream layout')
+        with self.assertRaises(RuntimeError):
+            main()
+
+    def test_plymouth_progress_without_unlock_is_idempotent_and_fail_closed(self):
+        module = runpy.run_path(str(PLATFORM / "usr/lib/uconsole/plymouth-progress"))
+        source = '''fun display_normal_callback() {
+  hide_password_dialog();
+  mode = Plymouth.GetMode();
+  if ((mode == "boot" || mode == "resume") && global.password_shown == 1) {
+    show_progress_bar();
+    start_fake_progress();
+  }
+}
+# sprites are initialized here
+'''
+        updated = module["adapt"](source)
+        self.assertNotIn("&& global.password_shown", updated)
+        self.assertNotIn("start_fake_progress();", updated)
+        self.assertIn("update_progress_bar(global.real_progress);", updated)
+        self.assertIn("hide_password_dialog();", updated)
+        self.assertTrue(updated.endswith("display_normal_callback();\n"))
+        self.assertEqual(module["adapt"](updated), updated)
+        with self.assertRaises(ValueError):
+            module["adapt"]("unrecognized theme")
+
+    def test_plymouth_handoff_keeps_normal_order_and_native_greeter(self):
+        config = (PLATFORM / "etc/mkinitcpio.conf.d/zz-uconsole.conf").read_text()
+        self.assertIn("plymouth uconsole-plymouth", config)
+        dropin = (PLATFORM / "etc/systemd/system/plymouth-quit.service.d/retain-splash.conf").read_text()
+        self.assertIn("ExecStart=\nExecStart=-/usr/bin/plymouth quit --retain-splash", dropin)
+        self.assertNotIn("Conflicts=", dropin)
+        self.assertIn("xwayland = { enabled = false }", (PLATFORM / "usr/share/uconsole/omarchy/sddm-hyprland.lua").read_text())
+        self.assertIn("After=plymouth-quit-wait.service", (PLATFORM / "etc/systemd/system/sddm.service.d/plymouth.conf").read_text())
+
     def test_openterface_is_pinned_packaged_and_device_scoped(self):
         package = ROOT / "packages/openterfaceqt"
         recipe = (package / "PKGBUILD").read_text()

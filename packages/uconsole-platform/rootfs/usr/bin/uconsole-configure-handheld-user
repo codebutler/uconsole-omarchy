@@ -17,6 +17,9 @@ def main():
     if include not in existing.splitlines():
         # The user's later options override these defaults, never the reverse.
         config.write_text(include + "\n" + existing)
+    # The image does not provide a tested suspend path. Use Omarchy's own menu
+    # flag instead of modifying the shell or disabling systemd power actions.
+    subprocess.run(["omarchy-toggle", "suspend-off", "on"], check=True)
     if args.theme:
         subprocess.run(["omarchy-theme-set", "uconsole"], check=True)
 

@@ -49,6 +49,8 @@ for pkg in linux-rpi-headers linux-aarch64 uboot-raspberrypi; do
   fi
 done
 grep -qx 'User=alarm' "${mount_dir}/var/lib/sddm/state.conf"
+grep -Fq 'id: powerConfirmation' "${mount_dir}/usr/share/sddm/themes/omarchy/Main.qml"
+grep -Fq 'id: powerConfirmation' "${mount_dir}/usr/share/omarchy/default/sddm/omarchy/Main.qml"
 [[ "$(stat -c %u "${mount_dir}/var/lib/sddm/state.conf")" == "$(in_image id -u sddm)" ]]
 [[ -x "${mount_dir}/usr/bin/uconsole-prepare-kernel-update" ]]
 [[ -f "${mount_dir}/usr/share/uconsole/kernel-package/PKGBUILD" ]]
@@ -57,6 +59,7 @@ grep -Fq 'tag = "-floating-window"' "${mount_dir}/home/alarm/.config/hypr/looknf
 grep -Fq 'panel.height -' "${mount_dir}/usr/share/omarchy/shell/plugins/image-picker/ImagePicker.qml"
 grep -Fq 'font=JetBrainsMono Nerd Font:size=10' "${mount_dir}/usr/share/omarchy/default/foot/screensaver.ini"
 grep -qx 'uconsole' "${mount_dir}/home/alarm/.local/state/omarchy/current/theme.name"
+[[ -f "${mount_dir}/home/alarm/.local/state/omarchy/toggles/suspend-off" ]]
 grep -Fq '#ff6b1a' "${mount_dir}/home/alarm/.local/state/omarchy/current/theme/colors.toml"
 grep -qx 'Papirus-Dark-Deeporange' "${mount_dir}/home/alarm/.local/state/omarchy/current/theme/icons.theme"
 in_image test -f /usr/share/icons/Papirus-Dark-Deeporange/48x48/places/folder.svg
@@ -92,6 +95,15 @@ grep -Fq 'usr/lib/udev/rules.d/90-uconsole-charging.rules' <<< "${initramfs_list
 for required in panel-cwu50 ocp8178_bl i2c-bcm2708 i2c-gpio i2c-brcmstb axp20x-i2c axp20x-regulator plymouth usr/lib/plymouth/renderers/drm.so usr/share/plymouth/themes/omarchy/omarchy.script; do
   grep -Fq "${required}" <<< "${initramfs_listing}"
 done
+
+grep -Fq 'plymouth quit --retain-splash' "${mount_dir}/etc/systemd/system/plymouth-quit.service.d/retain-splash.conf"
+in_image bash -euc '
+  check_dir=$(mktemp -d /tmp/uconsole-initramfs-check.XXXXXX)
+  cd "$check_dir"
+  lsinitcpio -x /boot/initramfs-linux.img >/dev/null
+  grep -Fq "# uConsole: show boot progress without requiring a disk-unlock prompt." \
+    usr/share/plymouth/themes/omarchy/omarchy.script
+'
 
 for package in "${mount_dir}"/var/cache/uconsole/repo/*.pkg.tar.*; do
   [[ "${package}" == *.sig ]] && continue

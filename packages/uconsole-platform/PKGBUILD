@@ -1,7 +1,7 @@
 # Maintainer: uconsole-archlinux contributors
 pkgname=uconsole-platform
 pkgver=1.0.0
-pkgrel=16
+pkgrel=17
 pkgdesc="Universal CM4/CM5 ClockworkPi uConsole platform integration"
 arch=(aarch64)
 url="https://github.com/ak-rex/uconsole-archlinux"

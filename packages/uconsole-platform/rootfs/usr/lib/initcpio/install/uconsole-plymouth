@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+build() {
+  # Run after the upstream plymouth hook. Adapt only the image copy, so theme
+  # changes retain their chosen colors/assets and upgrades never lose this fix.
+  local source=/usr/share/plymouth/themes/omarchy/omarchy.script temporary
+  [[ -f "${source}" ]] || return 1
+  temporary=$(mktemp) || return 1
+  if ! python3 /usr/lib/uconsole/plymouth-progress "${source}" "${temporary}"; then
+    rm -f "${temporary}"
+    return 1
+  fi
+  add_file "${temporary}" "${source}" 0644
+  local result=$?
+  rm -f "${temporary}"
+  return "${result}"
+}
+
+help() {
+  echo 'Show Omarchy boot progress without a disk-unlock prompt. Place after plymouth.'
+}

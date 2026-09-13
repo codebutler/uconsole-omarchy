@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+"""Adapt the installed Omarchy theme for an unencrypted boot, without fake progress."""
+import sys
+from pathlib import Path
+
+
+def adapt(source):
+    marker = "# uConsole: show boot progress without requiring a disk-unlock prompt."
+    if marker in source:
+        return source
+    before = '''  if ((mode == "boot" || mode == "resume") && global.password_shown == 1) {
+    show_progress_bar();
+    start_fake_progress();
+  }'''
+    after = '''  if (mode == "boot" || mode == "resume") {
+    show_progress_bar();
+    update_progress_bar(global.real_progress);
+  }'''
+    if source.count(before) != 1:
+        raise ValueError("Omarchy Plymouth theme changed; refusing an unrecognized progress callback")
+    # Invoke only after all sprites exist. Keep password prompts functional.
+    return source.replace(before, after, 1) + "\n" + marker + "\ndisplay_normal_callback();\n"
+
+
+if __name__ == "__main__":
+    source, destination = map(Path, sys.argv[1:])
+    destination.write_text(adapt(source.read_text()))
