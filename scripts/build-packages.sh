@@ -44,6 +44,13 @@ module_pkg="$(find "${BUILD_ROOT}/uconsole-modules-linux-rpi" -maxdepth 1 -name 
 "${PACMAN[@]}" -U --noconfirm "${module_pkg}"
 build_one uconsole-platform
 build_one uconsole-aiov2-ctl
+# Build the native KVM app against Arch libraries (never a bundled AppImage).
+"${PACMAN[@]}" -S --needed --noconfirm cmake ninja qt6-tools extra-cmake-modules \
+  qt6-base qt6-declarative qt6-multimedia qt6-serialport qt6-svg qt6-wayland \
+  ffmpeg gstreamer gst-plugins-base gst-plugins-good libpulse libusb v4l-utils \
+  libjpeg-turbo libgudev libglvnd libxkbcommon wayland zlib libx11 libxrandr \
+  libxrender libxi libxv libxcb xcb-util-cursor tesseract leptonica
+build_one openterfaceqt
 
 install -d "${REPO_OUT}"
 find "${BUILD_ROOT}" -maxdepth 2 -name '*.pkg.tar.*' ! -name '*.sig' -exec cp -f {} "${REPO_OUT}/" \;

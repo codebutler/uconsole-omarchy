@@ -1,0 +1,15 @@
+# Grant the active local seat access, before systemd's 73-seat-late.rules.
+# Based on upstream packaging/archlinux/openterfaceqt-udev.rules and device IDs.
+# No world-writable nodes, global group grants, firmware updates or GPIO writes.
+SUBSYSTEM=="usb", ATTR{idVendor}=="534d", ATTR{idProduct}=="2109", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="534d", ATTRS{idProduct}=="2109", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="345f", ATTR{idProduct}=="2132", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="345f", ATTRS{idProduct}=="2132", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="345f", ATTR{idProduct}=="2109", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="345f", ATTRS{idProduct}=="2109", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="7523", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="fe0c", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="fe0c", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1a86", ATTR{idProduct}=="55e0", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="4348", ATTR{idProduct}=="55e0", TAG+="uaccess"

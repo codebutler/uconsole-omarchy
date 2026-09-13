@@ -34,9 +34,14 @@ grep -q "PARTUUID=${boot_id}" "${mount_dir}/etc/fstab"
 
 in_image() { chroot "${mount_dir}" "$@"; }
 
-for pkg in linux-rpi uconsole-modules-linux-rpi uconsole-platform uconsole-aiov2-ctl omarchy quickshell sddm uwsm pipewire-audio pipewire-alsa pipewire-pulse wireplumber rtkit xdg-desktop-portal-xapp; do
+for pkg in linux-rpi uconsole-modules-linux-rpi uconsole-platform uconsole-aiov2-ctl openterfaceqt omarchy quickshell sddm uwsm pipewire-audio pipewire-alsa pipewire-pulse wireplumber rtkit xdg-desktop-portal-xapp; do
   in_image pacman -Q "${pkg}" >/dev/null
 done
+in_image test -x /usr/bin/openterfaceQT
+in_image pacman -Qo /usr/bin/openterfaceQT | grep -q openterfaceqt
+in_image test ! -e /opt/openterfaceqt
+in_image test -f /usr/share/applications/com.openterface.openterfaceQT.desktop
+in_image test -f /usr/lib/udev/rules.d/70-openterfaceqt.rules
 for pkg in linux-rpi-headers linux-aarch64 uboot-raspberrypi; do
   if in_image pacman -Q "${pkg}" >/dev/null 2>&1; then
     echo "image contains build-only or conflicting package: ${pkg}" >&2

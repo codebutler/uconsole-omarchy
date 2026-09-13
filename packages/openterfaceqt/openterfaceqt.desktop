@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Openterface KVM
+Comment=Control a target computer using the Openterface USB KVM
+Exec=env -u DISPLAY QT_QPA_PLATFORM=wayland openterfaceQT --backend ffmpeg
+Icon=com.openterface.openterfaceQT
+Terminal=false
+Categories=Utility;
+Keywords=Openterface;KVM;USB;HDMI;Capture;
+StartupNotify=true
+StartupWMClass=Openterface Mini-KVM

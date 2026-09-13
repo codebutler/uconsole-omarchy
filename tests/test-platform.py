@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import hashlib
 import configparser
 import runpy
 from pathlib import Path
@@ -14,6 +15,44 @@ PLATFORM = ROOT / "packages/uconsole-platform/rootfs"
 
 
 class PlatformTests(unittest.TestCase):
+    def test_openterface_is_pinned_packaged_and_device_scoped(self):
+        package = ROOT / "packages/openterfaceqt"
+        recipe = (package / "PKGBUILD").read_text()
+        self.assertIn("arch=(aarch64)", recipe)
+        self.assertIn("pkgver=0.5.30", recipe)
+        self.assertIn("a3f00b587c6008c9b343671ca074c972d92f935cd3793af7405840877191303b", recipe)
+        self.assertNotRegex(recipe, r"\bSKIP\b")
+        self.assertIn("-DCMAKE_SKIP_RPATH=ON", recipe)
+        self.assertIn("-DOPENTERFACE_BUILD_STATIC=OFF", recipe)
+        self.assertIn("-DENABLE_QT_DEPLOY=OFF", recipe)
+        self.assertIn("-DUSE_SHARED_FFMPEG=ON", recipe)
+        self.assertIn("-DQT_BUILD_PATH=/usr", recipe)
+        self.assertIn('patch -d "Openterface_QT-${_commit}"', recipe)
+        for asset in ("prefer-wayland.patch", "system-theme.patch", "openterfaceqt.desktop", "70-openterfaceqt.rules", "README.md"):
+            self.assertIn(hashlib.sha256((package / asset).read_bytes()).hexdigest(), recipe)
+        self.assertIn('< "${srcdir}/system-theme.patch"', recipe)
+        theme_patch = (package / "system-theme.patch").read_text()
+        self.assertIn('-    app.setStyle(QStyleFactory::create("Fusion"));', theme_patch)
+        self.assertIn('-    app.setPalette(systemPalette);', theme_patch)
+        self.assertIn('-    app.setStyleSheet(', theme_patch)
+        self.assertNotIn("xorg-xwayland", recipe)
+        self.assertNotIn("AppImage", recipe)
+        self.assertIn("build_one openterfaceqt", (ROOT / "scripts/build-packages.sh").read_text())
+        self.assertIn("uconsole-aiov2-ctl openterfaceqt", (ROOT / "scripts/customize.sh").read_text())
+        launcher = (package / "openterfaceqt.desktop").read_text()
+        self.assertIn("Exec=env -u DISPLAY QT_QPA_PLATFORM=wayland openterfaceQT --backend ffmpeg", launcher)
+        self.assertNotIn("sudo", launcher)
+        rules = (package / "70-openterfaceqt.rules").read_text()
+        for line in rules.splitlines():
+            if not line or line.startswith("#"):
+                continue
+            self.assertIn('TAG+="uaccess"', line)
+            self.assertIn("idVendor", line)
+            self.assertIn("idProduct", line)
+            self.assertNotIn("MODE=", line)
+        self.assertIn('SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="fe0c"', rules)
+        self.assertNotIn('SUBSYSTEM=="ttyUSB"', rules)
+
     def test_power_policy_uses_explicit_shutdown_and_limits_pack_current(self):
         config = configparser.ConfigParser()
         config.read(PLATFORM / "etc/UPower/UPower.conf.d/90-uconsole.conf")

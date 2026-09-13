@@ -60,13 +60,14 @@ mapfile -t packages < <(sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' \
 "${PAC[@]}" -Syu --noconfirm
 "${PAC[@]}" -S --needed --noconfirm omarchy-keyring omarchy "${packages[@]}"
 
-log "Install uConsole hardware packages"
+log "Install uConsole hardware and application packages"
 # Package filenames are intentionally stable across identical builds, while an
 # image-local signing key is generated for each build.  Never reuse a package
 # cached from an earlier build/key pair.
 rm -f /var/cache/pacman/pkg/uconsole-*.pkg.tar.*
+rm -f /var/cache/pacman/pkg/openterfaceqt-*.pkg.tar.*
 "${PAC[@]}" -S --needed --noconfirm \
-  uconsole-modules-linux-rpi uconsole-platform uconsole-aiov2-ctl
+  uconsole-modules-linux-rpi uconsole-platform uconsole-aiov2-ctl openterfaceqt
 
 log "Configure locale, clock, hostname, and the initial user"
 ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /etc/localtime

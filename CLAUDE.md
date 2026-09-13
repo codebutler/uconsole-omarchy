@@ -5,7 +5,7 @@
 `codebutler/uconsole-omarchy` builds a universal Arch Linux ARM / Omarchy raw
 image for the ClockworkPi uConsole with Raspberry Pi CM4 or CM5. It derives from
 `fabiiw05/uconsole-archlinux`; preserve that project's history and license.
-Read `README.md`, `MAINTAINING.md`, and `HANDHELD.md` for the current architecture,
+Read `README.md` and `MAINTAINING.md` for the current architecture,
 hardware verification checklist, and user-facing integrations.
 
 Use English for code comments and logs. Japanese documentation currently links

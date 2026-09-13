@@ -1,0 +1,19 @@
+--- a/main.cpp
++++ b/main.cpp
+@@ -166,12 +166,12 @@
+         // We only intervene when NO display is available at all — set DISPLAY=:0
+         // and use XCB as a last-resort fallback (headless / SSH-without-X cases).
+         if (!launcherDetected.isEmpty()) {
++        } else if (!waylandDisplay.isEmpty()) {
++            // Prefer the native session even when XWayland also exports DISPLAY.
++            qputenv("QT_QPA_PLATFORM", "wayland");
+         } else if (!x11Display.isEmpty()) {
+-            // DISPLAY is set - use XCB
++            // XCB is only selected for an X11-only session.
+             qputenv("QT_QPA_PLATFORM", "xcb");
+-        } else if (!waylandDisplay.isEmpty()) {
+-            // Fallback to Wayland only if X11 is not available
+-            qputenv("QT_QPA_PLATFORM", "wayland");
+         } else {
+             // No display found at all — last-resort fallback for headless/edge cases.
+             qputenv("DISPLAY", ":0");

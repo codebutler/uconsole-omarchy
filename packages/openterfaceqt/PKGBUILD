@@ -1,0 +1,52 @@
+# Maintainer: uconsole-omarchy contributors
+pkgname=openterfaceqt
+pkgver=0.5.30
+pkgrel=2
+pkgdesc="Openterface USB KVM host application, built against system Qt6"
+arch=(aarch64)
+url="https://github.com/TechxArtisanStudio/Openterface_QT"
+license=(AGPL-3.0-only)
+depends=(qt6-base qt6-declarative qt6-multimedia qt6-serialport qt6-svg qt6-wayland
+         ffmpeg gstreamer gst-plugins-base gst-plugins-good libpulse libusb
+         v4l-utils libjpeg-turbo libgudev libglvnd libxkbcommon wayland zlib
+         libx11 libxrandr libxrender libxi libxv libxcb xcb-util-cursor
+         tesseract leptonica)
+makedepends=(cmake ninja qt6-tools extra-cmake-modules)
+conflicts=(openterfaceqt-bin)
+options=(!lto)
+_commit=44246790c7fc5b0541b724f3f7e4426cd9a62096
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/${_commit}.tar.gz"
+        prefer-wayland.patch system-theme.patch openterfaceqt.desktop 70-openterfaceqt.rules README.md)
+sha256sums=('a3f00b587c6008c9b343671ca074c972d92f935cd3793af7405840877191303b'
+            '1b680e52c544a96dad1626884b70fffa9334e8c5139bafddafa4de471edc58f6'
+            '5525c9eab88583e1b59628a5445e40e3e68f26546190d151af56997e46047c3c'
+            '0d4954747d76437286ab25e9bde5e474628aff91157ca09a99bb442884549e60'
+            'b507db865d10c55ded1e1969e08afb3e56d99fa16265b427786d4581817a4359'
+            '58fcd02724ef137e60b431c2ac6f456e540ce222a6650b78b993df46f44cc3dc')
+
+prepare() {
+  patch -d "Openterface_QT-${_commit}" -p1 < "${srcdir}/prefer-wayland.patch"
+  patch -d "Openterface_QT-${_commit}" -p1 < "${srcdir}/system-theme.patch"
+}
+
+build() {
+  cmake -S "Openterface_QT-${_commit}" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_SKIP_RPATH=ON \
+    -DQT_BUILD_PATH=/usr -DCMAKE_PREFIX_PATH=/usr \
+    -DOPENTERFACE_BUILD_STATIC=OFF -DBUILD_SHARED_LIBS=ON \
+    -DUSE_SHARED_FFMPEG=ON -DGSTREAMER_PREFIX=/usr \
+    -DENABLE_QT_DEPLOY=OFF -DCMAKE_DISABLE_FIND_PACKAGE_OpenCV=ON
+  cmake --build build --parallel "${UCONSOLE_BUILD_JOBS:-2}"
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm0644 "${startdir}/openterfaceqt.desktop" \
+    "${pkgdir}/usr/share/applications/com.openterface.openterfaceQT.desktop"
+  install -Dm0644 "${startdir}/70-openterfaceqt.rules" \
+    "${pkgdir}/usr/lib/udev/rules.d/70-openterfaceqt.rules"
+  install -Dm0644 "Openterface_QT-${_commit}/LICENSE" \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm0644 "${startdir}/README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+}
