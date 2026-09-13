@@ -168,6 +168,7 @@ class PlatformTests(unittest.TestCase):
         modules = result.stdout.splitlines()
         for name in ("i2c_bcm2708", "i2c_gpio", "axp20x_i2c", "axp20x_regulator"):
             self.assertLess(modules.index(name), modules.index("panel-cwu50"))
+        self.assertLess(modules.index("i2c_brcmstb"), modules.index("vc4"))
 
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()

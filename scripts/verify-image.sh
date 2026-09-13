@@ -89,7 +89,7 @@ done
 grep -Rqs 'updates/uconsole/panel-cwu50' "${mount_dir}"/usr/lib/modules/*/modules.dep
 initramfs_listing="$(in_image lsinitcpio /boot/initramfs-linux.img)"
 grep -Fq 'usr/lib/udev/rules.d/90-uconsole-charging.rules' <<< "${initramfs_listing}"
-for required in panel-cwu50 ocp8178_bl i2c-bcm2708 i2c-gpio axp20x-i2c axp20x-regulator plymouth usr/lib/plymouth/renderers/drm.so usr/share/plymouth/themes/omarchy/omarchy.script; do
+for required in panel-cwu50 ocp8178_bl i2c-bcm2708 i2c-gpio i2c-brcmstb axp20x-i2c axp20x-regulator plymouth usr/lib/plymouth/renderers/drm.so usr/share/plymouth/themes/omarchy/omarchy.script; do
   grep -Fq "${required}" <<< "${initramfs_listing}"
 done
 
