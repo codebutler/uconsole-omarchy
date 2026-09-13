@@ -1,0 +1,25 @@
+packages/uconsole-platform/rootfs/etc/mkinitcpio.conf.d/zz-uconsole.conf
+  s_9a4d7e5255981d::t_827eeef9479134 4-6
+tests/test-platform.py
+  s_9a4d7e5255981d::t_827eeef9479134 171
+scripts/verify-image.sh
+  s_9a4d7e5255981d::t_16ceb33d5bb911 92
+packages/uconsole-platform/PKGBUILD
+  s_9a4d7e5255981d::t_827eeef9479134 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "53aa17282ea60e774a6319a4ed538c53acffa1fc",
+  "prompts": {},
+  "sessions": {
+    "s_9a4d7e5255981d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07756-b9d9-7a11-b75a-69e2a8957111",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Eric Butler <eric@codebutler.com>"
+    }
+  }
+}
