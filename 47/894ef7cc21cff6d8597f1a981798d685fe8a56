@@ -1,0 +1,325 @@
+packages/uconsole-platform/rootfs/usr/share/uconsole/boot/cmdline.txt
+  s_9a4d7e5255981d::t_628ba7380690be 1
+packages/uconsole-platform/rootfs/usr/lib/systemd/system/uconsole-speaker-amp.service
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-11
+packages/uconsole-modules-linux-rpi/PKGBUILD
+  s_9a4d7e5255981d::t_24ea23993ba28d 3-5,21,28
+  s_9a4d7e5255981d::t_500404d9edc45a 1-2,6,8-20,22-27,29-44
+  s_9a4d7e5255981d::t_31a67e286de8d6 7
+packages/uconsole-platform/rootfs/etc/sddm.conf.d/25-uconsole-users.conf
+  s_9a4d7e5255981d::t_24ea23993ba28d 1-2
+packages/uconsole-platform/rootfs/usr/share/uconsole/boot/uconsole-aio.txt
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1
+packages/uconsole-platform/rootfs/usr/bin/uconsole-configure-console
+  s_9a4d7e5255981d::t_c890fcac71c2a0 1-15
+tests/test-handheld-live.py
+  s_9a4d7e5255981d::t_513c0b1871a576 39-40
+  s_9a4d7e5255981d::t_3cd3cc8d9378d5 42-44,47-49,104-105,107,109
+  s_9a4d7e5255981d::t_7960eb7d3fa740 1-38,45-46,50,52-74,76,81-88,92-103,106,108,110-120
+  s_9a4d7e5255981d::t_e9e1a93eba7c8c 51,75,77-80,89-91
+  s_9a4d7e5255981d::t_83693bbf04b20e 41
+packages/uconsole-aiov2-ctl/aiov2-rails-boot.service
+  s_9a4d7e5255981d::t_a810722e3786f1 1-11
+tests/test-mpv.lua
+  s_9a4d7e5255981d::t_785a19fbb857c2 1-38
+packages/uconsole-platform/rootfs/usr/bin/uconsole-idle-backlight
+  s_9a4d7e5255981d::t_7c92e913a4a6a7 1-45
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/sddm-hyprland.lua
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-9
+packages/uconsole-platform/rootfs/usr/bin/uconsole-prepare-kernel-update
+  s_9a4d7e5255981d::t_f65952096c56ef 58,63
+  s_9a4d7e5255981d::t_24ea23993ba28d 3,5-7,9-14,16-17,21-31,34-39,42-45,47-57,59-62,64-78,80-84,86-95
+  s_9a4d7e5255981d::t_cbbe4be75bd7a9 40-41,96
+packages/uconsole-platform/rootfs/usr/bin/uconsole-configure-handheld-user
+  s_9a4d7e5255981d::t_ca98da66ddfc2c 1-25
+scripts/verify-image.sh
+  s_9a4d7e5255981d::t_10648fc4c25397 104-112
+  s_9a4d7e5255981d::t_07a9bc49d70d54 21-26
+  s_9a4d7e5255981d::t_fe3d2750fb8c7c 46-51,68
+  s_9a4d7e5255981d::t_bd8c7d6f6b0bd2 35-36,38,69-70,80,89,92,95-96,98-101,117-120
+  s_9a4d7e5255981d::t_628ba7380690be 31,85,87-88
+  s_9a4d7e5255981d::t_634723416f51a2 40-45
+  s_9a4d7e5255981d::t_978c23e876dd05 56-57
+  s_9a4d7e5255981d::t_4301831be02bc2 58-59
+  s_9a4d7e5255981d::t_4844d2e92218e7 37,60-62
+  s_9a4d7e5255981d::t_7c85b0a8d8795d 64-65
+  s_9a4d7e5255981d::t_bb894e98dc7f62 94
+  s_9a4d7e5255981d::t_67b88b440ffc40 86
+  s_9a4d7e5255981d::t_c890fcac71c2a0 54-55,63,66-67
+  s_9a4d7e5255981d::t_db550852d0bfba 52-53
+  s_9a4d7e5255981d::t_887ac65997489b 1-20,27-30,32-34,39,71-79,81-84,90-91,93,97,102-103,113-116,121-123
+HANDHELD.md
+  s_9a4d7e5255981d::t_f0ad134ec0c8c2 11-13,141-142
+  s_9a4d7e5255981d::t_4301831be02bc2 76-94
+  s_9a4d7e5255981d::t_978c23e876dd05 52-55
+  s_9a4d7e5255981d::t_290828cedcf80c 39-41
+  s_9a4d7e5255981d::t_4844d2e92218e7 57-68
+  s_9a4d7e5255981d::t_b175a75e79f13c 27-32
+  s_9a4d7e5255981d::t_7960eb7d3fa740 1-10,14-26,33-38,42-51,56,69-75,95-97,104-140,143-144
+  s_9a4d7e5255981d::t_628ba7380690be 98-103
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/monitors.lua
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-5
+packages/uconsole-platform/rootfs/usr/lib/udev/rules.d/90-uconsole-charging.rules
+  s_9a4d7e5255981d::t_4301831be02bc2 1-5
+packages/uconsole-platform/rootfs/usr/bin/uconsole-install-boot-config
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-20
+README.ja.md
+  s_9a4d7e5255981d::t_76ea6e793a586f 1,3-4
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/bindings-loader.lua
+  s_9a4d7e5255981d::t_7c85b0a8d8795d 1-2
+packages/uconsole-platform/rootfs/usr/bin/uconsole-aio-config
+  s_9a4d7e5255981d::t_5ab150e9f8371b 34,36-38,40-45
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-33,35,39,46-53
+packages/uconsole-platform/rootfs/usr/lib/systemd/user/uconsole-theme-sync.service
+  s_9a4d7e5255981d::t_b3311d93d3e1f7 1-8
+  s_9a4d7e5255981d::t_47dfdddc3dab1b 9-13
+packages/uconsole-platform/rootfs/usr/share/libalpm/hooks/97-uconsole-power-policy.hook
+  s_9a4d7e5255981d::t_4301831be02bc2 1-11
+packages/uconsole-platform/rootfs/usr/bin/uconsole-resize-rootfs
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-11,13-21
+  s_9a4d7e5255981d::t_10648fc4c25397 12
+tests/test-static.sh
+  s_9a4d7e5255981d::t_10648fc4c25397 21-22,25,36,48-51,54-58
+  s_9a4d7e5255981d::t_5ab150e9f8371b 44-47
+  s_9a4d7e5255981d::t_887ac65997489b 3,5-20,23-24,26-28,33-35,37,39,42-43,53,59,61
+  s_9a4d7e5255981d::t_4483fb592acf63 62
+  s_9a4d7e5255981d::t_fe3d2750fb8c7c 29-32
+  s_9a4d7e5255981d::t_31a67e286de8d6 38
+  s_9a4d7e5255981d::t_785a19fbb857c2 63
+packages/uconsole-platform/rootfs/usr/share/omarchy/themes/uconsole/keyboard.rgb
+  s_9a4d7e5255981d::t_68df207a1e08e0 1
+packages/uconsole-platform/rootfs/etc/xdg/xdg-desktop-portal/hyprland-portals.conf
+  s_9a4d7e5255981d::t_b3311d93d3e1f7 1-7
+packages/uconsole-platform/rootfs/usr/lib/systemd/system/uconsole-resize-rootfs.service
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-13
+packages/uconsole-platform/rootfs/usr/share/uconsole/mpv/mpv.conf
+  s_9a4d7e5255981d::t_7c92e913a4a6a7 1-5
+packages/uconsole-platform/rootfs/usr/bin/uconsole-configure-omarchy-display
+  s_9a4d7e5255981d::t_b3311d93d3e1f7 28-31
+  s_9a4d7e5255981d::t_68df207a1e08e0 49-50,52-61
+  s_9a4d7e5255981d::t_21f9b5c395bf17 1-7,9-27,32-48,62-65
+  s_9a4d7e5255981d::t_c709197715aa42 8,51
+packages/uconsole-platform/rootfs/etc/mkinitcpio.conf.d/zz-uconsole.conf
+  s_9a4d7e5255981d::t_628ba7380690be 1-4
+  s_9a4d7e5255981d::t_67b88b440ffc40 5-7
+  s_9a4d7e5255981d::t_c890fcac71c2a0 8
+packages/uconsole-platform/rootfs/usr/share/omarchy/themes/uconsole/colors.toml
+  s_9a4d7e5255981d::t_68df207a1e08e0 1-26
+packages/uconsole-platform/rootfs/etc/UPower/UPower.conf.d/90-uconsole.conf
+  s_9a4d7e5255981d::t_4301831be02bc2 1-11
+packages/uconsole-platform/rootfs/usr/lib/systemd/system/uconsole-wifi-watchdog.service
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-7
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/bindings.lua
+  s_9a4d7e5255981d::t_42bd869a53633d 37-41,48-51,56,63-65,71,78-81,86
+  s_9a4d7e5255981d::t_f732a0a0effcf9 8,33,36,44,47,53,59,62,68,74,77,83
+  s_9a4d7e5255981d::t_3e998e4f0e106d 91
+  s_9a4d7e5255981d::t_a9ce68e70c3d78 9-13,15-16
+  s_9a4d7e5255981d::t_760e0b0cd327d4 14,34,45,60,75
+  s_9a4d7e5255981d::t_b2cdc419ac404f 17,20-32,35,46,61,66,76,82,84-85,88-90,92-93
+  s_9a4d7e5255981d::t_b175a75e79f13c 1-6
+  s_9a4d7e5255981d::t_f92f46615b69f3 7,18-19,42-43,52,54-55,57-58,67,69-70,72-73,87
+packages/uconsole-platform/rootfs/usr/lib/modules-load.d/uconsole.conf
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1
+packages/uconsole-platform/rootfs/etc/systemd/system/sddm.service.d/plymouth.conf
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-3
+packages/uconsole-platform/rootfs/usr/bin/uconsole-initialize-login
+  s_9a4d7e5255981d::t_24ea23993ba28d 1-15
+MAINTAINING.md
+  s_9a4d7e5255981d::t_9ade5bb270bc87 49-59
+  s_9a4d7e5255981d::t_fe3d2750fb8c7c 25-28,35-48,60,140-141
+  s_9a4d7e5255981d::t_76ea6e793a586f 1-24,29-32,61-75,78-79,82-139,142-156
+  s_9a4d7e5255981d::t_d4c21e8d8d32b2 157-159
+packages/uconsole-platform/rootfs/usr/share/omarchy/themes/uconsole/shell.toml
+  s_9a4d7e5255981d::t_68df207a1e08e0 1-5,10-19
+  s_9a4d7e5255981d::t_3e998e4f0e106d 6-9
+packages/uconsole-platform/uconsole-platform.install
+  s_9a4d7e5255981d::t_c890fcac71c2a0 5
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-2,4,12-17
+  s_9a4d7e5255981d::t_24ea23993ba28d 3
+  s_9a4d7e5255981d::t_ef8f9075cf0c63 6-11
+scripts/customize.sh
+  s_9a4d7e5255981d::t_81705d4dfee32f 52-53
+  s_9a4d7e5255981d::t_9f9f30d45f494e 2-3,6,8-25,34,36-48,50,57-63,68-71,73-75,77-79,81-83,85-86,88-91,94-98,101-102,104,110-118,120-130,134-140
+  s_9a4d7e5255981d::t_32a08496268527 64-67
+  s_9a4d7e5255981d::t_d99edbb532c045 99
+  s_9a4d7e5255981d::t_95e2202cb4a683 26-33
+  s_9a4d7e5255981d::t_c81bb605799935 106
+  s_9a4d7e5255981d::t_21f9b5c395bf17 107
+  s_9a4d7e5255981d::t_ca98da66ddfc2c 108-109
+  s_9a4d7e5255981d::t_bd8c7d6f6b0bd2 131-133
+  s_9a4d7e5255981d::t_7c85b0a8d8795d 103
+  s_9a4d7e5255981d::t_24ea23993ba28d 105,119
+scripts/build-packages.sh
+  s_585f0c77c8f64b::t_8c475b71a1716f 77-81
+  s_9a4d7e5255981d::t_86d0fd17b5ce6f 28
+  s_9a4d7e5255981d::t_98c1202ca63f99 22,26
+  s_9a4d7e5255981d::t_81705d4dfee32f 23-25
+  s_9a4d7e5255981d::t_95d0723d1e4150 51-55,90,92-93
+  s_9a4d7e5255981d::t_8e9462b42fe9cd 58,61,74,84,88
+  s_9a4d7e5255981d::t_f0b53420f392e0 59-60,72,91
+  s_9a4d7e5255981d::t_ef8f9075cf0c63 39
+  s_9a4d7e5255981d::t_e9dc62e47680e8 2,5-8,10-17,21,27,30-34,36-38,40,42-46,48-49,56-57,62-71,73,76,82-83,85-87,89,95-96
+  s_9a4d7e5255981d::t_b7e7a162d174e2 19-20
+config/boot/config.txt
+  s_9a4d7e5255981d::t_a8a6172112aeb4 1,7-9,12,16,21-26,28-29
+tests/test-platform.py
+  s_9a4d7e5255981d::t_ce745b485f22a5 46,68
+  s_9a4d7e5255981d::t_5966b097420b76 226-280,319
+  s_9a4d7e5255981d::t_785a19fbb857c2 393-395
+  s_9a4d7e5255981d::t_4301831be02bc2 3,17-28,31-38
+  s_9a4d7e5255981d::t_4844d2e92218e7 9,69-107,114-117,119-121
+  s_9a4d7e5255981d::t_cb3043285c229c 110-113,118
+  s_9a4d7e5255981d::t_db550852d0bfba 4,281-318
+  s_9a4d7e5255981d::t_67b88b440ffc40 29-30
+  s_9a4d7e5255981d::t_86d0fd17b5ce6f 49
+  s_9a4d7e5255981d::t_c709197715aa42 320-392,398-403
+  s_9a4d7e5255981d::t_b175a75e79f13c 39-45
+  s_9a4d7e5255981d::t_47dfdddc3dab1b 108-109
+  s_9a4d7e5255981d::t_e9e1a93eba7c8c 396-397
+  s_9a4d7e5255981d::t_978c23e876dd05 47-48,50-67
+  s_9a4d7e5255981d::t_628ba7380690be 122-132
+  s_9a4d7e5255981d::t_4483fb592acf63 1-2,5-8,10-16,133-225,404-406
+packages/uconsole-platform/rootfs/usr/share/uconsole/boot/config.txt
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-30
+packages/uconsole-platform/rootfs/usr/share/libalpm/hooks/96-uconsole-omarchy-display.hook
+  s_9a4d7e5255981d::t_21f9b5c395bf17 1-11
+CLAUDE.md
+  s_9a4d7e5255981d::t_3a248c8cbed7ce 1,3,5-9,11-13,15,18-22,25-55,61
+packages/uconsole-platform/rootfs/usr/lib/uconsole/speaker-amp
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-4
+  s_585f0c77c8f64b::t_8c475b71a1716f 5
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/looknfeel.lua
+  s_9a4d7e5255981d::t_24c2ecee28f65f 28
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-15
+  s_9a4d7e5255981d::t_21f9b5c395bf17 16-26
+  s_9a4d7e5255981d::t_c258d9e1df73ff 27,30-31
+  s_9a4d7e5255981d::t_362b48b6da3b1b 29
+packages/uconsole-platform/rootfs/usr/lib/uconsole/gamepad-keys
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-42
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/idle-dim.qml
+  s_9a4d7e5255981d::t_68df207a1e08e0 1-31
+packages/uconsole-modules-linux-rpi/uconsole-modules-linux-rpi.install
+  s_9a4d7e5255981d::t_ef8f9075cf0c63 2-7,16
+  s_9a4d7e5255981d::t_500404d9edc45a 1,8-15,17
+packages/uconsole-platform/rootfs/usr/lib/systemd/system/uconsole-gamepad-keys.service
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-12
+packages/uconsole-aiov2-ctl/90-aiov2.preset
+  s_9a4d7e5255981d::t_a810722e3786f1 1-2
+packages/uconsole-platform/rootfs/usr/share/uconsole/mpv/hwdec.lua
+  s_9a4d7e5255981d::t_7c92e913a4a6a7 1-27
+packages/uconsole-platform/rootfs/etc/sddm.conf.d/20-uconsole-wayland.conf
+  s_9a4d7e5255981d::t_f92f46615b69f3 1-5
+config/overlays/README.md
+  s_9a4d7e5255981d::t_bf9a651d35273e 1,3-6
+packages/uconsole-platform/rootfs/etc/NetworkManager/conf.d/20-uconsole-wifi.conf
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-2
+packages/uconsole-platform/rootfs/usr/lib/udev/rules.d/90-uconsole-backlight.rules
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1
+packages/uconsole-platform/rootfs/usr/share/omarchy/themes/uconsole/icons.theme
+  s_9a4d7e5255981d::t_978c23e876dd05 1
+packages/uconsole-platform/rootfs/usr/bin/uconsole-sync-gtk-theme
+  s_9a4d7e5255981d::t_b3311d93d3e1f7 1-75
+README.md
+  s_9a4d7e5255981d::t_fe3d2750fb8c7c 27-28,123,126,129-143
+  s_9a4d7e5255981d::t_d4c21e8d8d32b2 46
+  s_9a4d7e5255981d::t_76ea6e793a586f 13-15,17-21,23-25,33,35,38,41-42,44-45,47,50-51,54,57-58,60,62,65-68,71-74,76,78-80,82-84,86-94,96-100,102,104-105,107,109-112,117-119,121,125,127,144-165
+  s_9a4d7e5255981d::t_a06d9ce7b82749 1,3-4,6-11
+  s_9a4d7e5255981d::t_290828cedcf80c 30-31
+  s_9a4d7e5255981d::t_5ab150e9f8371b 108,114-116
+packages/uconsole-platform/build-papirus-theme.py
+  s_9a4d7e5255981d::t_978c23e876dd05 1-46
+packages/uconsole-platform/rootfs/usr/lib/systemd/system/uconsole-initialize-login.service
+  s_9a4d7e5255981d::t_24ea23993ba28d 1-11
+lib/common.sh
+  s_9a4d7e5255981d::t_a8a6172112aeb4 2,5-6,10,12-14,21,25
+packages/uconsole-platform/rootfs/usr/lib/systemd/system/uconsole-wifi-watchdog.timer
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-10
+packages/uconsole-platform/PKGBUILD
+  s_9a4d7e5255981d::t_978c23e876dd05 36-37
+  s_9a4d7e5255981d::t_b3311d93d3e1f7 11,38-40
+  s_9a4d7e5255981d::t_c81bb605799935 56
+  s_9a4d7e5255981d::t_24ea23993ba28d 46-49
+  s_9a4d7e5255981d::t_68df207a1e08e0 13,41-45
+  s_9a4d7e5255981d::t_21f9b5c395bf17 10
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-3,5-9,14-34,50-55,57
+  s_9a4d7e5255981d::t_4301831be02bc2 4,12
+  s_9a4d7e5255981d::t_08b1ea9ab66e29 35
+packages/uconsole-platform/rootfs/usr/bin/uconsole-window
+  s_9a4d7e5255981d::t_7c92e913a4a6a7 1-81
+packages/uconsole-platform/rootfs/usr/lib/modprobe.d/uconsole-sdr.conf
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-4
+packages/uconsole-platform/rootfs/usr/bin/uconsole-apply-power-policy
+  s_9a4d7e5255981d::t_4301831be02bc2 1-11
+.gitignore
+  s_9a4d7e5255981d::t_a06d9ce7b82749 22-24
+  s_9a4d7e5255981d::t_db1db066d468b3 21,25-27
+packages/uconsole-platform/rootfs/usr/share/uconsole/xkb/gamepad.xkb
+  s_9a4d7e5255981d::t_f732a0a0effcf9 1-12
+packages/uconsole-platform/rootfs/usr/bin/uconsole-hardware-info
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-11
+.github/workflows/lint.yml
+  s_9a4d7e5255981d::t_887ac65997489b 1,6,11
+  s_9a4d7e5255981d::t_a06d9ce7b82749 10
+packages/uconsole-platform/rootfs/usr/share/libalpm/hooks/95-uconsole-omarchy-updates.hook
+  s_9a4d7e5255981d::t_c81bb605799935 1-11
+config/omarchy/packages.txt
+  s_9a4d7e5255981d::t_ca98da66ddfc2c 120
+  s_9a4d7e5255981d::t_978c23e876dd05 154
+  s_9a4d7e5255981d::t_069d20aca064d1 95-97,111
+  s_9a4d7e5255981d::t_0b34a31eef2481 1-69,71-94,98-110,112-119,121-148,150-153,155-158
+  s_9a4d7e5255981d::t_b3311d93d3e1f7 149
+  s_9a4d7e5255981d::t_31a67e286de8d6 70
+packages/uconsole-platform/rootfs/usr/lib/uconsole/wifi-watchdog
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-11
+  s_9a4d7e5255981d::t_10648fc4c25397 12-17
+config/boot/cmdline.txt
+  s_9a4d7e5255981d::t_628ba7380690be 1
+MAINTAINING.ja.md
+  s_9a4d7e5255981d::t_76ea6e793a586f 1,3-4
+packages/uconsole-platform/rootfs/usr/lib/systemd/system-preset/90-uconsole.preset
+  s_9a4d7e5255981d::t_7a7eadcc1e9f0e 1-5
+  s_9a4d7e5255981d::t_24ea23993ba28d 6
+scripts/build-in-docker.sh
+  s_9a4d7e5255981d::t_d4c21e8d8d32b2 30
+  s_9a4d7e5255981d::t_68da827cd9ec28 1-29,31
+.github/workflows/upstream-watch.yml
+  s_9a4d7e5255981d::t_e2a456f36c73d8 1,4,7,14-18
+  s_9a4d7e5255981d::t_a06d9ce7b82749 11
+packages/uconsole-platform/rootfs/usr/bin/uconsole-configure-omarchy-updates
+  s_9a4d7e5255981d::t_c81bb605799935 1-19
+packages/uconsole-platform/rootfs/usr/share/uconsole/omarchy/wallpaper.svg
+  s_9a4d7e5255981d::t_68df207a1e08e0 1-13
+build.sh
+  s_9a4d7e5255981d::t_634723416f51a2 173-178
+  s_9a4d7e5255981d::t_10648fc4c25397 7,59,161-162
+  s_9a4d7e5255981d::t_9b421f8d659455 80-85,91
+  s_9a4d7e5255981d::t_d4c21e8d8d32b2 180,182
+  s_9a4d7e5255981d::t_68da827cd9ec28 2,10-12,14,17,21,25,28,32-33,35-36,38,41-42,47,52,60-65,69-70,72-73,75,79,86-88,93,95-107,109-134,140-144,148-160,164,170-172,179,181,183
+packages/uconsole-aiov2-ctl/PKGBUILD
+  s_9a4d7e5255981d::t_a810722e3786f1 1-11,22-42
+  s_9a4d7e5255981d::t_08b1ea9ab66e29 12-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "47894ef7cc21cff6d8597f1a981798d685fe8a56",
+  "prompts": {},
+  "sessions": {
+    "s_585f0c77c8f64b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a077c4-97b9-7541-9826-297a5c82ad1f",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Eric Butler <eric@codebutler.com>"
+    },
+    "s_9a4d7e5255981d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07756-b9d9-7a11-b75a-69e2a8957111",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Eric Butler <eric@codebutler.com>"
+    }
+  }
+}
