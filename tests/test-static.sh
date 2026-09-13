@@ -60,4 +60,7 @@ fi
 
 echo "static checks passed"
 python3 tests/test-platform.py
-if command -v lua >/dev/null; then lua tests/test-mpv.lua; fi
+if command -v lua >/dev/null; then
+  lua tests/test-mpv.lua
+  lua tests/test-monitors.lua
+fi
