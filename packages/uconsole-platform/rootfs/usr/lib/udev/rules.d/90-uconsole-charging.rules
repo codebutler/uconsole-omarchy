@@ -1,0 +1,5 @@
+# Total pack current, not per-cell. Below the Samsung 35E's 1.7 A standard
+# charge current even if only one cell is connected. This is not a substitute
+# for hardware protection or checking the installed cells' ratings/condition.
+# Lower the software ceiling first (the driver also clamps the active current).
+ACTION=="add", SUBSYSTEM=="power_supply", KERNEL=="axp20x-battery", TEST=="constant_charge_current_max", ATTR{constant_charge_current_max}="1500000", ATTR{constant_charge_current}="1500000"

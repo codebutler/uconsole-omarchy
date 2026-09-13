@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+iface="$(iw dev 2>/dev/null | awk '$1=="Interface" {print $2; exit}')"
+[[ -n "${iface}" ]] || exit 0
+[[ "$(nmcli -t -f WIFI radio 2>/dev/null)" == enabled ]] || exit 0
+state="$(nmcli -t -f DEVICE,STATE device | awk -F: -v i="${iface}" '$1==i {print $2}')"
+if [[ "${state}" != connected ]]; then
+  nmcli device connect "${iface}" >/dev/null 2>&1 || true
+  exit 0
+fi
+gateway="$(ip -4 route show default dev "${iface}" | awk 'NR==1 {print $3}')"
+if [[ -n "${gateway}" ]] && ! ping -q -c1 -W2 "${gateway}" >/dev/null 2>&1; then
+  nmcli device reapply "${iface}" >/dev/null 2>&1 || {
+    nmcli device disconnect "${iface}" >/dev/null 2>&1 || true
+    nmcli device connect "${iface}" >/dev/null 2>&1 || true
+  }
+fi

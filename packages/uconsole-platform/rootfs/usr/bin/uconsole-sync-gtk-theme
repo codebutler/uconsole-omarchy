@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""Publish the current Omarchy accent through XApp and GTK3 named colors.
+
+Called after Omarchy applies GNOME preferences and at graphical login.
+Uses the packaged portal backend; no private portal daemon or GTK4 override.
+"""
+import os
+from pathlib import Path
+import re
+import subprocess
+import tomllib
+
+
+IMPORT = '@import url("uconsole-accent.css");'
+
+
+def accent_css(accent):
+    if not isinstance(accent, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", accent):
+        raise ValueError("Omarchy accent must be a six-digit hex color")
+    # Choose black or white selection text by relative luminance/contrast.
+    rgb = [int(accent[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+    luminance = sum(c * weight for c, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+    foreground = "#000000" if (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) else "#ffffff"
+    colors = {
+        "accent_color": accent, "accent_bg_color": accent, "accent_fg_color": foreground,
+        "theme_selected_bg_color": accent, "theme_selected_fg_color": foreground,
+        "selected_bg_color": accent, "selected_fg_color": foreground,
+        "theme_unfocused_selected_bg_color": accent,
+        "theme_unfocused_selected_fg_color": foreground,
+    }
+    return "/* Generated from the current Omarchy theme. */\n" + "".join(
+        f"@define-color {name} {value};\n" for name, value in colors.items())
+
+
+def write_gtk3(config_dir, css):
+    directory = config_dir / "gtk-3.0"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "uconsole-accent.css").write_text(css)
+    path = directory / "gtk.css"
+    existing = path.read_text() if path.exists() else ""
+    if IMPORT not in existing.splitlines():
+        # Keep personal rules intact and later in the cascade.
+        path.write_text(IMPORT + "\n" + existing)
+
+
+def get_setting(schema, key):
+    return subprocess.check_output(["gsettings", "get", schema, key], text=True).strip()
+
+
+def set_setting(schema, key, value):
+    subprocess.run(["gsettings", "set", schema, key, value], check=True)
+
+
+def main():
+    home = Path.home()
+    state_dir = Path(os.environ.get("XDG_STATE_HOME", home / ".local/state"))
+    theme_file = state_dir / "omarchy/current/theme/colors.toml"
+    if not theme_file.exists():
+        return  # First login may precede theme provisioning.
+    theme = tomllib.loads(theme_file.read_text())
+    accent = theme["accent"]
+    css = accent_css(accent)  # Validate before writing any settings.
+    scheme = get_setting("org.gnome.desktop.interface", "color-scheme")
+    contrast = get_setting("org.gnome.desktop.a11y.interface", "high-contrast")
+    set_setting("org.x.apps.portal", "color-scheme", scheme)
+    set_setting("org.x.apps.portal", "high-contrast", contrast)
+    config_dir = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config"))
+    write_gtk3(config_dir, css)
+    # Write last: the backend emits SettingChanged for the new accent.
+    set_setting("org.x.apps.portal", "accent-rgb", accent)
+
+
+if __name__ == "__main__":
+    main()

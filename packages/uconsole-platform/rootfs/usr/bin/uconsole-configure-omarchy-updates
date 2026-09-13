@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+update_script=/usr/share/omarchy/bin/omarchy-update-system-pkgs
+[[ -f "${update_script}" ]] || exit 0
+grep -Fq '/usr/bin/uconsole-prepare-kernel-update' "${update_script}" && exit 0
+grep -qx 'set -e' "${update_script}" || {
+  echo 'Omarchy update entry point changed; uConsole adapter needs review.' >&2
+  exit 1
+}
+install -d /var/lib/uconsole
+cp -a "${update_script}" /var/lib/uconsole/omarchy-update-system-pkgs.upstream
+temporary_script="$(mktemp)"
+trap 'rm -f "${temporary_script}"' EXIT
+awk '{print} /^set -e$/ {
+  print "sudo /usr/bin/pacman -Sy"
+  print "sudo /usr/bin/uconsole-prepare-kernel-update"
+}' "${update_script}" > "${temporary_script}"
+bash -n "${temporary_script}"
+install -m0755 "${temporary_script}" "${update_script}"

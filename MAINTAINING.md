@@ -1,314 +1,159 @@
-English | [日本語](MAINTAINING.ja.md)
+# Maintaining the universal uConsole image
 
-# Maintaining uconsole-archlinux
+## Trust and upstreams
 
-This is the maintenance runbook: what has to be kept up to date, the recurring
-Arch-specific operational gotchas, and the recorded versions that were verified
-on real hardware.
+| Component | Source / pinned revision |
+|---|---|
+| Omarchy | official `https://pkgs.omarchy.org/edge/aarch64` repository |
+| Omarchy key | `40DF B630 FF42 BCFF B047 046C F013 4EE6 80CA C571` |
+| Kernel | Arch Linux ARM `linux-rpi`, 4K pages |
+| CM4 overlay | ClusterM ClockworkPi-linux `213641631845a112a594fb088da0db6f4a00469a` |
+| CM4/CM5 modules and CM5 overlays | yota9/uconsole-cm5 `bf7a0ab55654c96b74d013520e1196d39f66391a` |
+| AIO controller | HackerGadgets/aiov2_ctl `c21ca742775b32ecea30b334e15a2d7f003e511a` |
 
-## Verified versions
+All source archives have SHA-256 checksums in their PKGBUILDs. Upstream Omarchy
+and the generated uConsole repository require package signatures. The image
+build creates an ephemeral signing key, embeds only its public key, and exports
+the signed repository to `out/repo`.
 
-The combination below was cross-built and verified booting on real hardware
-(new-batch DSI panel). When bumping anything, update this table after a fresh
-on-hardware re-verification (see the checklist below).
+For a published repository, build with a protected persistent `GNUPGHOME`,
+publish the exported repository directory, and change its `Server` URL. Never
+publish or embed the secret key.
 
-| Component        | Value                                                        |
-| ---------------- | ------------------------------------------------------------ |
-| Kernel repo      | `ak-rex/ClockworkPi-linux`                                   |
-| Kernel branch    | `rpi-6.12.y`                                                 |
-| Kernel commit    | `0234e320bec7748fc6f1fb6904a055de10f0a727` (2026-07-05)      |
-| Kernel release   | `6.12.94-v8+`                                                |
-| Base tarball     | `ArchLinuxARM-rpi-aarch64-latest.tar.gz` (fetched 2026-06-06) |
-| Base tarball md5 | `fd593833765dd6a09f8835010cc1e114`                          |
-| Build image      | `ubuntu:24.04` (digest not pinned)                          |
-| HW verified      | 2026-07-10 (new-batch panel)                                |
+## Kernel update procedure
 
-> Nothing is force-pinned in the build. `build-kernel.sh` clones the branch
-> **HEAD**, `build.sh` fetches the **rolling** `-latest` tarball, and docker
-> pulls the rolling `ubuntu:24.04`. This table is the record of what actually
-> worked; use it to reproduce or bisect when a fresh build misbehaves.
+The module PKGBUILD defaults to the installed `linux-rpi` version and header
+tree. On-device preparation supplies `UCONSOLE_KERNEL_PACKAGE_VERSION`,
+`UCONSOLE_KERNEL_RELEASE`, and `UCONSOLE_KERNEL_BUILD_DIR` to build against
+downloaded headers without installing the new kernel first. It sets:
 
-## What needs ongoing maintenance
+```text
+depends=("linux-rpi=<exact pkgver-pkgrel>")
+/usr/lib/modules/<kernel release>/updates/uconsole/*.ko.zst
+```
 
-### 1. Upstream kernel (the biggest cost)
+The image-local repository is maintained on the device by
+`uconsole-prepare-kernel-update`. Omarchy's system-package updater calls it after
+refreshing databases and before starting the upgrade transaction. It downloads
+signed kernel/headers, verifies exact versions, builds as `uconsole-build`, checks
+all nine module vermagic values, and signs the result with a root-only key created
+on that device. Only the module package and repository metadata are published;
+the actual kernel installation remains pacman's job. Failed downloads, builds,
+or verification stop the update without removing the old dependency lock.
 
-`build-kernel.sh` runs `git clone --depth 1 --branch rpi-6.12.y`, i.e. the
-branch **HEAD**. Upstream changes — especially in
-`drivers/gpu/drm/panel/panel-cwu50.c` (old/new panel detection) — take effect
-immediately.
+`uconsole-configure-omarchy-updates` adds two preparation commands after upstream's
+`set -e`. The package hook reapplies that small adaptation on Omarchy upgrades.
+It refuses an unrecognized entry point instead of silently assuming integration
+still works. The pristine upstream command is saved under `/var/lib/uconsole`.
 
-Risks: upstream force-push / branch deletion, `rpi-6.12.y` reaching EOL or moving
-to a newer branch, panel-driver regressions. Every kernel bump requires an
-on-hardware re-verification (below). Record the working commit in the table above.
+`uconsole-configure-omarchy-display` similarly reapplies the bounded image-picker
+layout and smaller Foot screensaver font after package upgrades, retaining upstream
+backups. It refuses unknown source layouts. The user look-and-feel template sizes
+floating dialogs relative to the logical monitor and keeps normal terminals tiled.
+Keep the bar's monitor scale unchanged when adjusting these content dimensions.
 
-The `.github/workflows/upstream-watch.yml` job checks the branch HEAD weekly and
-opens an issue when it drifts from the recorded commit.
+Audio requires `pipewire-audio`, `pipewire-alsa`, `pipewire-pulse`, and WirePlumber,
+not just the base PipeWire daemon. The ALSA and Bluetooth SPA plugins live in
+`pipewire-audio`; without it the kernel can expose sound cards while the desktop
+has no audio devices. These are explicit platform dependencies and image packages.
 
-### 2. Arch Linux ARM base (rolling)
+For centrally published packages, when ALARM releases a kernel:
 
-**Keyring expiry is the most common operational failure.** In `customize.sh`,
-`pacman -Sy` (NetworkManager/sudo) can fail with signature errors when the
-keyring baked into the base tarball is too old. `customize.sh` already refreshes
-`archlinuxarm-keyring archlinux-keyring` before installing packages; if it still
-fails, see the keyring section below.
+1. Build in a clean aarch64 Arch root with the new `linux-rpi` and
+   `linux-rpi-headers` installed.
+2. Run `scripts/build-packages.sh`.
+3. Confirm every package and `uconsole.db.tar.gz` has a signature.
+4. Boot and complete the CM4 hardware checklist.
+5. Repeat it on CM5 before changing the universal-verification label.
+6. Publish the whole repository atomically. Never publish `linux-rpi` without
+   its matching uConsole module package.
 
-Also watch for: repository moves / partial-upgrade breakage, and the risk of the
-ALARM project itself stalling. If a mirror or the whole `-latest` URL becomes
-unavailable, override `TARBALL_URL` with an alternate source.
+Because of the exact dependency, `pacman -Syu` safely reports an unsatisfied
+dependency while the repository is between kernel builds. Do not add
+`IgnorePkg`; that hides the synchronization problem instead of enforcing it.
 
-### 3. On-hardware re-verification (cannot be automated — the real cost)
-
-CI cannot replace this. After any kernel or base bump, flash and verify on a real
-uConsole. This is the fundamental maintenance cost. **The bar for cutting a
-release is passing this checklist.**
-
-Re-verification checklist:
-
-- [ ] Boots to userspace (no black screen / hang before login).
-- [ ] DSI panel displays correctly — ideally on **both old and new batch**
-      panels (this is the whole point of the ak-rex kernel).
-- [ ] NetworkManager is up (`nmcli` / can connect Wi-Fi).
-- [ ] Audio works.
-- [ ] `scripts/collect-logs.sh /dev/sdX` yields a fresh journal (see the caveat
-      below), with no alarming errors in `dmesg.txt` / `journal-warn.txt`.
-
-> Caveat: the ALARM base tarball ships a baked-in journal from *its* build host,
-> so an "empty / no new boot" result from `collect-logs.sh` means the device
-> never reached userspace — not that logging is broken.
-
-### 4. Toolchain / environment drift
-
-`ubuntu:24.04` (docker), `qemu-user-static` + binfmt, and the host's
-`util-linux` (losetup/sfdisk) / `bsdtar`. These rarely break compatibility, but
-a bump can. Requests to build on non-Arch hosts may also arrive (dependency
-command names differ across distros).
-
-## Arch-specific operations
-
-### Keyring
-
-Symptoms: `signature is unknown trust` / `invalid or corrupted package`.
-Fix (prefer this over the slow `pacman-key --refresh-keys`):
+## Automated verification
 
 ```sh
-pacman -Sy archlinuxarm-keyring archlinux-keyring
-# if still failing:
-pacman-key --init && pacman-key --populate archlinuxarm
+./tests/test-static.sh
+sudo ./scripts/verify-image.sh out/uconsole-omarchy-universal-YYYYMMDD.img
 ```
 
-`customize.sh` does the first step automatically before installing packages.
+The image verifier checks PARTUUID boot/fstab references, package ownership,
+the exact kernel dependency, module priority, initramfs and kernel presence,
+both generations of DTBs, all uConsole overlays, repository signatures, and
+absence of identity/secrets.
 
-### Rolling updates vs. the self-built kernel
+The following structural cases use the same bytes and are covered by the boot
+filters and storage parser:
 
-`linux-aarch64` and `uboot-raspberrypi` are removed in the chroot, so a later
-on-device `pacman -Syu` will not normally reinstall them. As belt-and-suspenders,
-`customize.sh` writes `IgnorePkg = linux-aarch64 uboot-raspberrypi` into
-`/etc/pacman.conf` so a dependency or firmware update cannot pull them back and
-clobber the `/boot` setup. Firmware (`raspberrypi-bootloader`) updates can still
-change `/boot`; re-check after a large upgrade.
+| Model/storage | Firmware section | root device parser |
+|---|---|---|
+| CM4 Lite microSD | `[cm4]` | `/dev/mmcblk*pN` |
+| CM4 eMMC | `[cm4]` | `/dev/mmcblk*pN` |
+| CM5 Lite microSD | `[cm5]` | `/dev/mmcblk*pN` |
+| CM5 eMMC | `[cm5]` | `/dev/mmcblk*pN` |
+| directly flashed NVMe | `[cm4]` or `[cm5]` | `/dev/nvme*n*pN` |
 
-### On-device kernel updates (`scripts/update.sh`)
+## Physical hardware checklist
 
-Because the kernel is file-injected (not a pacman package), existing installs
-cannot get a newer kernel from `pacman -Syu` — only the base OS updates that way.
-`scripts/update.sh` closes that gap without a re-flash: on the device it pulls a
-release tarball (built by `scripts/package-kernel.sh`) and installs the
-kernel/modules/DTBs/overlays + boot config in place, via the same
-`install_kernel_artifacts` helper (`lib/common.sh`) that `build.sh` uses, so the
-on-image and on-device paths cannot drift.
+Run the entire list after every kernel, module, overlay, firmware, Omarchy, or
+boot configuration change.
 
-Key properties:
+### CM4 (old and new panel batches where possible)
 
-- It installs **only published releases** (the `latest`/`--tag` GitHub Release
-  asset), never a branch HEAD — this preserves the hardware-verification gate
-  below.
-- The release asset name is **stable** (`uconsole-kernel.tar.gz`) so the
-  `.../releases/latest/download/...` URL is fixed; a sidecar
-  `uconsole-kernel.version` lets the device skip the download when already
-  current (recorded in `/boot/uconsole-kernel.release`).
-- It backs up `kernel8-cm4.img`/`config.txt`/`cmdline.txt` to `*.bak` and leaves
-  the previous kernel's `/usr/lib/modules/<kver>` in place, so a bad kernel can
-  be rolled back by restoring the `.bak` from any machine.
+- [ ] Plymouth hands off to scaled SDDM; Omarchy starts through UWSM.
+- [ ] DSI image is clean, landscape, and correctly scaled.
+- [ ] DRM/V3D acceleration and Vulkan Broadcom driver work.
+- [ ] AXP228 reports battery presence, charge percentage, health, voltage, and
+      charger state; test charge termination without bypassing the PMIC.
+- [ ] Backlight levels and permissions work.
+- [ ] Internal speaker and headphone switching work.
+- [ ] Keyboard, trackball, mouse buttons, and A/B/X/Y hold modes work.
+- [ ] Wi-Fi/Bluetooth work; NetworkManager is the only network manager.
+- [ ] `chronyc tracking` synchronizes after wireless association.
+- [ ] Root expands on microSD and exposed eMMC.
+- [ ] `vcgencmd get_throttled` shows no undervoltage/thermal history.
 
-### AIO extension board and on-device updates
+### HackerGadgets upgrade kit
 
-The optional HackerGadgets AIO board (`AIO_BOARD=v1|v2`, see the README) is a
-**build-time** opt-in: `build.sh` appends the board's overlays to
-`/boot/config.txt` (`apply_aio_config`), `build-kernel.sh` enables the
-`rtc-pcf85063`/`spidev` modules unconditionally, and `customize.sh` (v2) installs
-the `uconsole-aio-gpio.service` GPIO power-hold + the DVB blacklist. Release
-tarballs are cut *without* AIO, so `scripts/update.sh` — which reinstalls
-`config.txt` from the tarball — **overwrites the appended AIO overlay lines** on a
-kernel update (RTC/SPI overlays are lost until re-added; the old file is saved to
-`config.txt.bak`). The GPIO service and modprobe blacklist live under `/etc`
-(not `/boot`), so they **survive** updates. AIO users should re-append their
-config.txt block (or re-flash) after a kernel update. We deliberately keep AIO out
-of public releases to avoid enabling GPIO rails on devices without the board.
+- [ ] NVMe enumerates but an existing disk is unchanged.
+- [ ] Gigabit Ethernet works.
+- [ ] CM4 USB 2 works; CM5 exposes the one supported USB 3 host port.
+- [ ] CM4 fixed fan and CM5 firmware-controlled PWM fan behave correctly.
+- [ ] CSI camera enumerates.
+- [ ] Optional MT7921AUN Wi-Fi and Bluetooth enumerate with MediaTek firmware.
+- [ ] `uconsole-aio-config` enables the intended model section only.
+- [ ] Installing AIO tools alone leaves every gated rail untouched.
+- [ ] Explicit GPS/LoRa/SDR/internal-USB rail choices persist across boot.
 
-> ⚠️ The **v2 GPIO power-hold is a userspace service, not the config.txt
-> `gpio=` directive** — the firmware directive is released when the kernel GPIO
-> subsystem initialises, so the rails (notably the RTL-SDR) power off ~8 s into
-> boot. `uconsole-aio-gpio.service` re-asserts and holds BCM 7/16/23/27 via
-> `gpioset` (libgpiod v2). This was found on real hardware.
+### CM5 additions
 
-### pacman sandbox / Landlock
+- [ ] Repeat every applicable CM4 test on physical CM5 hardware.
+- [ ] BCM2712 DTB and CM5 panel/audio overlays are active.
+- [ ] RP1 audio, headphone detection, and amplifier auto-mute work.
+- [ ] Internal RTC keeps time using the kit RTC battery connector.
+- [ ] EEPROM boot order and firmware are recorded.
+- [ ] Thermal/fan behavior and undervoltage history remain healthy under load.
+- [ ] Flash the identical artifact to microSD and CM5 eMMC; both boot and expand.
 
-Symptom on the device: `pacman -Syu` dies with `restricting filesystem access
-failed because Landlock is not supported by the kernel!`. Our self-built kernel
-(`bcm2711_defconfig`) has no `CONFIG_SECURITY_LANDLOCK`, so pacman 7's download
-sandbox cannot start. `customize.sh` writes `DisableSandbox` into the
-`[options]` section of `/etc/pacman.conf`, so shipped images are unaffected.
+Only after the CM4 checklist passes may an artifact be labeled
+**CM4-tested / CM5-candidate**. Until then both models are candidates.
 
-This drops only the network-facing downloader's isolation; GPG signature
-verification (`SigLevel`) still applies, so package integrity is unchanged. To
-restore the sandbox instead, a kernel rebuild with `CONFIG_SECURITY_LANDLOCK=y`
-would be required (not enabled by the defconfig). For an already-flashed device
-that predates this change, add `DisableSandbox` under `[options]` by hand.
+## Omarchy package delta
 
-### Tracking ALARM news
+`config/omarchy/packages.txt` starts from Omarchy's full aarch64 base list.
+Removed: `asdcontrol`, `bolt`, `dotnet-runtime`, `kernel-modules-hook`,
+`obs-studio`, `obsidian`, `pinta`, `qemu-user-static-binfmt`, and
+`power-profiles-daemon`. Replacements: `wf-recorder` for GPU Screen Recorder and
+`neovim` for `nvim`. Added: `linux-rpi`, `vulkan-broadcom`, `upower`, `chrony`,
+`python-evdev`, `libgpiod`, `raspberrypi-utils`, and `tailscale`.
 
-Watch the front-page announcements and forum on
-[archlinuxarm.org](https://archlinuxarm.org/), and
-[archlinuxarm/PKGBUILDs](https://github.com/archlinuxarm/PKGBUILDs) on GitHub.
+Rationale: remove x86-only, unsupported, heavyweight optional, and suspend/power
+daemon assumptions; retain the complete Omarchy shell; add Raspberry Pi graphics,
+hardware, time, input, and portable-networking integration.
 
-### Time sync (systemd-timesyncd) vs. networkd / NetworkManager conflict
-
-**Symptom**: on the device `timedatectl` stays at `System clock synchronized: no`
-and the clock is badly off. `systemd-timesyncd` is `active`, yet
-`timedatectl show-timesync` shows `PacketCount=0` and an empty `ServerName` —
-it **never sends a single NTP packet** (even though `ping` and a manual UDP 123
-query succeed).
-
-**Root cause (two layers)**:
-
-1. **The uConsole has no battery-backed RTC** (`timedatectl` reports
-   `RTC time: n/a`), so the clock drifts on every boot and network sync is
-   effectively mandatory.
-2. The base Arch Linux ARM (rpi) tarball ships with **`systemd-networkd`
-   enabled**, while `scripts/customize.sh` additionally enables
-   **NetworkManager** (around L148), so **both run at once**. The real link
-   (`wlan0`) is managed by NetworkManager, but networkd claims the unplugged
-   wired `end0`, stays stuck `configuring`, and writes
-   `ONLINE_STATE=offline` into `/run/systemd/netif/state`.
-   `systemd-timesyncd` reads that networkd-provided online state, concludes it
-   is offline, and **never starts syncing**.
-
-**Permanent fix (on device)**:
-
-```sh
-# NetworkManager is our chosen manager, so disable networkd to remove the conflict
-sudo systemctl disable --now systemd-networkd.socket systemd-networkd \
-  systemd-networkd-wait-online
-sudo systemctl mask systemd-networkd
-sudo rm -rf /run/systemd/netif        # drop the stale offline state
-# Pin Japanese NTP servers (optional but reliable)
-sudo install -Dm644 /dev/stdin /etc/systemd/timesyncd.conf.d/10-japan.conf <<'CONF'
-[Time]
-NTP=ntp.nict.jp 0.jp.pool.ntp.org 1.jp.pool.ntp.org
-FallbackNTP=0.arch.pool.ntp.org 1.arch.pool.ntp.org 2.arch.pool.ntp.org 3.arch.pool.ntp.org
-CONF
-sudo systemctl restart systemd-timesyncd
-timedatectl timesync-status   # ServerName=ntp.nict.jp / synced == OK
-```
-
-**TODO (fix in the image)**: in `scripts/customize.sh`, next to the
-NetworkManager enablement, also run `systemctl disable systemd-networkd
-systemd-networkd.socket systemd-networkd-wait-online` and drop the
-`timesyncd.conf.d` file above, so future images avoid this out of the box.
-
-### WiFi instability (brcmfmac)
-
-**Symptom**: WiFi occasionally drops; reconnecting via `nmcli` restores it.
-
-The `brcmfmac` driver (CM4 onboard WiFi) wedges in at least two distinct ways.
-Both leave the link dead until a manual reconnect, so the image now ships both a
-preventive fix (power save off) and a recovery net (a watchdog).
-
-**Cause 1 — power save.** `brcmfmac` ships with power saving on (`Power save:
-on`); in this state it occasionally puts the chip to sleep and fails to wake.
-
-Fix — disable power save permanently via NetworkManager:
-
-```sh
-sudo iw dev wlan0 set power_save off            # immediate, until reboot
-sudo tee /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'EOF'  # permanent
-[connection]
-wifi.powersave=2
-EOF
-```
-
-**Cause 2 — a failed roam.** On a WPA2/WPA3-transition, band-steering AP (one
-SSID, several BSSIDs across 2.4/5 GHz), NetworkManager's background scan
-(`bgscan simple:30:-65:300`) roams to another BSSID, and `brcmfmac` fails SAE
-external auth on the transition BSSID:
-
-```
-kernel: brcmf_cfg80211_external_auth: External authentication failed: status=1
-```
-
-The link then dies (or stays "connected" while passing no traffic) until a
-manual `nmcli` reconnect. Power save is already off, so this is a separate bug.
-
-Fix — cut the failing roam by pinning the band (per-connection, on device), and
-rely on the watchdog below to auto-recover the residual cases:
-
-```sh
-# Lock this connection to 5 GHz so cross-band steering can't trigger the roam.
-sudo nmcli connection modify <SSID> 802-11-wireless.band a
-sudo nmcli connection up <SSID>
-# (Optional, most aggressive: pin one AP outright)
-#   sudo nmcli connection modify <SSID> 802-11-wireless.bssid AA:BB:CC:DD:EE:FF
-```
-
-The band pin is network-specific (it names your SSID/band), so it stays a
-per-device tweak, not an image default.
-
-**Fixed in the image**:
-- `scripts/customize.sh` writes the power-save config above at build time.
-- It also installs a **WiFi recovery watchdog** — `/usr/local/sbin/uconsole-wifi-watchdog`
-  driven by `uconsole-wifi-watchdog.timer` (every 30 s). If `wlan0` is
-  `disconnected`, or `connected` but the default gateway is unreachable across
-  two probes, it forces a NetworkManager reconnect. It only acts when an
-  autoconnect wifi profile exists (never fights a deliberate disconnect) and
-  uses only NetworkManager + iproute2 + iputils (all already in the base).
-  Inspect with `journalctl -t uconsole-wifi-watchdog`.
-
-## Future directions
-
-- **Package the kernel as a PKGBUILD** instead of file-injection. Under pacman
-  management, on-device kernel updates and rollback protection become clean.
-  This is the "proper Arch" approach; larger effort, out of current scope.
-  `scripts/update.sh` (below) is the interim, file-injection-native updater.
-- **Release distribution.** Kernel + boot-config updates for existing installs
-  are already shipped via GitHub Releases (`scripts/package-kernel.sh` +
-  `scripts/update.sh`). Optionally also publish full re-verified images
-  (xz-compressed) with the verified-version table attached, to avoid a 30-60 min
-  build for first-time users. Mind the ~6G image size.
-- **CI-built release assets.** A workflow could build the kernel artifacts in
-  Docker and attach them to a release automatically. Deferred because the
-  hardware-verification gate cannot be automated — a human must flash and verify
-  before a release is published.
-- **Version pinning.** If reproducibility matters, thread `KSRC_COMMIT` through
-  `build-kernel.sh` and a versioned `TARBALL_URL` through `build.sh`, then pin
-  the values in the table above.
-
-## Cutting a release
-
-1. Bump what needs bumping (kernel commit, base tarball, etc.).
-2. `bash -n build.sh scripts/*.sh lib/*.sh` and `shellcheck` are green (CI does
-   this on every push/PR).
-3. Full build: `./scripts/build-kernel.sh` then `sudo ./build.sh`.
-4. Flash and pass the on-hardware re-verification checklist above.
-   **This is the gate:** do not publish a release that has not passed it.
-5. Update the verified-versions table (both this file and `MAINTAINING.ja.md`).
-6. Package the on-device kernel update and publish it so existing installs can
-   `update.sh` to it:
-
-   ```sh
-   TAG=v$(date +%Y%m%d) ./scripts/package-kernel.sh
-   gh release create "$TAG" out/uconsole-kernel.tar.gz out/uconsole-kernel.version
-   ```
-
-   Keep the asset names as-is (`uconsole-kernel.tar.gz` / `.version`) — the
-   `update.sh` latest-release URL depends on them being stable across releases.
-7. (Optional) Also upload the xz-compressed full image to the same release.
+Do not copy Omarchy's x86 pacman mirror configuration. Keep ALARM's `core` and
+`extra` mirrors, and add only Omarchy's `edge/aarch64` repository. It must have
+higher priority than ALARM `extra` because Omarchy publishes ABI-matched rebuilds
+of packages such as Hyprland and Hyprtoolkit.

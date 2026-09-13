@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export LC_ALL=C
+
+[[ ${EUID} -eq 0 ]] || { echo 'Run with sudo.' >&2; exit 1; }
+exec 9>/run/lock/uconsole-kernel-update.lock
+flock -n 9 || { echo 'Another uConsole kernel preparation is running.' >&2; exit 1; }
+
+target_version="$(pacman -Si linux-rpi | awk '/^Version / {print $3; exit}')"
+installed_version="$(pacman -Q linux-rpi | awk '{print $2}')"
+[[ -n "${target_version}" ]] || { echo 'Cannot resolve linux-rpi from the package databases.' >&2; exit 1; }
+if [[ "${installed_version}" == "${target_version}" ]]; then
+  echo "uConsole drivers already match linux-rpi ${target_version}."
+  exit 0
+fi
+if pacman -Si uconsole-modules-linux-rpi | tr ' ' '\n' | grep -Fxq "linux-rpi=${target_version}"; then
+  echo "Matching uConsole drivers for ${target_version} are already in the repository."
+  exit 0
+fi
+
+headers_version="$(pacman -Si linux-rpi-headers | awk '/^Version / {print $3; exit}')"
+[[ "${headers_version}" == "${target_version}" ]] || {
+  echo 'Kernel and headers are out of sync; leaving the installed kernel untouched.' >&2
+  exit 1
+}
+[[ "$(pacman-conf --repo uconsole Server)" == file:///var/cache/uconsole/repo ]] || {
+  echo 'Automatic local builds require the image-local uconsole repository.' >&2
+  exit 1
+}
+for command in makepkg gcc make bsdtar zstd modinfo gpg repo-add; do
+  command -v "${command}" >/dev/null || { echo "Missing build tool: ${command}" >&2; exit 1; }
+done
+
+repo=/var/cache/uconsole/repo
+install -d /var/cache/uconsole/build
+work_dir="$(mktemp -d /var/cache/uconsole/build/kernel.XXXXXXXX)"
+echo "Building uConsole drivers for ${target_version} in ${work_dir}"
+kernel_file="$(pacman -Spdd --print-format '%f' linux-rpi)"
+headers_file="$(pacman -Spdd --print-format '%f' linux-rpi-headers)"
+pacman -Swdd --noconfirm --cachedir /var/cache/pacman/pkg linux-rpi linux-rpi-headers
+cp "/var/cache/pacman/pkg/${kernel_file}" "/var/cache/pacman/pkg/${headers_file}" "${work_dir}/"
+for package in "${kernel_file}" "${headers_file}"; do
+  actual_version="$(bsdtar -xOf "${work_dir}/${package}" .PKGINFO | sed -n 's/^pkgver = //p')"
+  [[ "${actual_version}" == "${target_version}" ]] || { echo 'Downloaded package version mismatch.' >&2; exit 1; }
+done
+
+install -d "${work_dir}/headers" "${work_dir}/recipe"
+bsdtar -xpf "${work_dir}/${headers_file}" -C "${work_dir}/headers"
+mapfile -t header_trees < <(find "${work_dir}/headers/usr/lib/modules" -mindepth 2 -maxdepth 2 -type d -name build)
+[[ ${#header_trees[@]} -eq 1 ]] || { echo 'Expected exactly one kernel header tree.' >&2; exit 1; }
+header_tree="${header_trees[0]}"
+kernel_release="$(cat "${header_tree}/include/config/kernel.release")"
+[[ "$(basename "$(dirname "${header_tree}")")" == "${kernel_release}" ]] || exit 1
+cp /usr/share/uconsole/kernel-package/PKGBUILD /usr/share/uconsole/kernel-package/uconsole-modules-linux-rpi.install "${work_dir}/recipe/"
+id -u uconsole-build >/dev/null 2>&1 || useradd --system --no-create-home --home-dir /var/lib/uconsole/build-user --shell /usr/bin/nologin uconsole-build
+chmod 0755 "${work_dir}"
+chown -R uconsole-build:uconsole-build "${work_dir}/headers" "${work_dir}/recipe"
+runuser -u uconsole-build -- env -C "${work_dir}/recipe" \
+  HOME="${work_dir}/recipe" MAKEFLAGS=-j2 \
+  UCONSOLE_KERNEL_PACKAGE_VERSION="${target_version}" \
+  UCONSOLE_KERNEL_RELEASE="${kernel_release}" \
+  UCONSOLE_KERNEL_BUILD_DIR="${header_tree}" \
+  makepkg --nodeps --noconfirm --cleanbuild
+
+shopt -s nullglob
+module_packages=("${work_dir}/recipe/"*.pkg.tar.*)
+[[ ${#module_packages[@]} -eq 1 ]] || { echo 'Expected exactly one module package.' >&2; exit 1; }
+module_package="${module_packages[0]}"
+bsdtar -xOf "${module_package}" .PKGINFO | grep -Fxq "depend = linux-rpi=${target_version}"
+install -d "${work_dir}/verify"
+bsdtar -xpf "${module_package}" -C "${work_dir}/verify"
+modules=("${work_dir}/verify/usr/lib/modules/${kernel_release}/updates/uconsole/"*.ko.zst)
+[[ ${#modules[@]} -eq 9 ]] || { echo 'Expected nine uConsole drivers.' >&2; exit 1; }
+for module in "${modules[@]}"; do
+  [[ "$(modinfo -F vermagic "${module}")" == "${kernel_release} "* ]] || {
+    echo "Module ABI mismatch: ${module}" >&2; exit 1
+  }
+done
+
+export GNUPGHOME=/var/lib/uconsole/package-signing
+install -d -m0700 "${GNUPGHOME}"
+key_identity=uconsole-local-builder
+if ! gpg --batch --list-secret-keys "${key_identity}" >/dev/null 2>&1; then
+  gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key "${key_identity}" ed25519 sign 0
+fi
+key_fingerprint="$(gpg --batch --with-colons --list-secret-keys "${key_identity}" | awk -F: '$1=="fpr" {print $10; exit}')"
+gpg --batch --armor --export "${key_fingerprint}" > "${work_dir}/builder-key.asc"
+pacman-key --add "${work_dir}/builder-key.asc"
+pacman-key --lsign-key "${key_fingerprint}"
+gpg --batch --yes --local-user "${key_fingerprint}" --detach-sign "${module_package}"
+gpgv --keyring /etc/pacman.d/gnupg/pubring.gpg "${module_package}.sig" "${module_package}"
+install -m0644 "${module_package}" "${module_package}.sig" "${repo}/"
+repo-add -s -k "${key_fingerprint}" "${repo}/uconsole.db.tar.gz" "${repo}/$(basename "${module_package}")"
+gpgv --keyring /etc/pacman.d/gnupg/pubring.gpg "${repo}/uconsole.db.tar.gz.sig" "${repo}/uconsole.db.tar.gz"
+echo "Signed drivers for ${target_version} published. No installed kernel was changed."
+rm -rf "${work_dir}"

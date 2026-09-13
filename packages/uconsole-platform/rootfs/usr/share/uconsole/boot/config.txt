@@ -1,0 +1,30 @@
+# Universal ClockworkPi uConsole boot configuration.
+[all]
+arm_64bit=1
+ignore_lcd=1
+max_framebuffers=2
+disable_overscan=1
+disable_fw_kms_setup=1
+camera_auto_detect=1
+display_auto_detect=0
+dtparam=ant2
+enable_uart=1
+initramfs initramfs-linux.img followkernel
+
+[cm4]
+otg_mode=1
+dtparam=pciex1
+dtoverlay=clockworkpi-uconsole-cm4
+dtoverlay=vc4-kms-v3d-pi4,cma-384
+dtoverlay=audremap,pins_12_13
+
+[cm5]
+dtparam=pciex1
+dtoverlay=dwc2,dr_mode=host
+dtoverlay=uconsole-cm5-base
+dtoverlay=uconsole-audio-cm5
+dtoverlay=vc4-kms-v3d
+
+[all]
+# Empty by default. uconsole-aio-config writes only user-approved AIO settings.
+include uconsole-aio.txt

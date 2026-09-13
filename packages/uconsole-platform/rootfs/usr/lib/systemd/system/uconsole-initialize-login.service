@@ -1,0 +1,11 @@
+[Unit]
+Description=Initialize the first Omarchy graphical login user
+Before=sddm.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/uconsole-initialize-login
+RemainAfterExit=yes
+
+[Install]
+WantedBy=graphical.target

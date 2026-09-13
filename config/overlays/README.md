@@ -1,12 +1,6 @@
-# overlays
+# Extra device-tree overlays
 
-Any `*.dtbo` placed here is copied into the image's `/boot/overlays/` at build time.
-
-The uConsole DSI panel overlay (`clockworkpi-uconsole-cm4`, etc.) is deployed
-automatically from the kernel artifacts built by `scripts/build-kernel.sh`, so
-**you do not need to place it here**.
-
-This directory is for any extra overlays you want to add yourself.
-
-> `.dtbo` files are **not** gitignored. Only commit ones that are
-> license-compatible for redistribution.
+The supported CM4 and CM5 overlays are compiled and owned by the
+`uconsole-platform` package. This directory is retained only as a reference for
+downstream variants; the universal builder deliberately does not copy arbitrary
+unowned DTBOs into `/boot`.

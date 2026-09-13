@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Apply package-owned power policy on a running system; image provisioning
+# only installs the files, which take effect at the first real boot.
+set -euo pipefail
+[[ -d /run/systemd/system ]] || exit 0
+if systemd-detect-virt --quiet --chroot; then exit 0; fi
+udevadm control --reload-rules
+udevadm trigger --action=add --subsystem-match=power_supply --sysname-match=axp20x-battery
+udevadm settle --timeout=10
+# Do not start an otherwise inactive daemon during package installation.
+systemctl try-restart upower.service

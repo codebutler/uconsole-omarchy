@@ -1,0 +1,57 @@
+# Maintainer: uconsole-archlinux contributors
+pkgname=uconsole-platform
+pkgver=1.0.0
+pkgrel=14
+pkgdesc="Universal CM4/CM5 ClockworkPi uConsole platform integration"
+arch=(aarch64)
+url="https://github.com/ak-rex/uconsole-archlinux"
+license=(MIT GPL-2.0-only)
+depends=(linux-rpi uconsole-modules-linux-rpi mkinitcpio plymouth networkmanager chrony
+         libgpiod python python-evdev brightnessctl raspberrypi-utils base-devel git gnupg
+         pipewire-audio pipewire-alsa pipewire-pulse wireplumber rtkit terminus-font
+         xdg-desktop-portal-xapp xdg-desktop-portal-gtk papirus-icon-theme 'upower>=1.91.4')
+makedepends=(dtc imagemagick)
+install=uconsole-platform.install
+_cm5_commit=bf7a0ab55654c96b74d013520e1196d39f66391a
+_cm4_commit=213641631845a112a594fb088da0db6f4a00469a
+source=(
+  "uconsole-cm5-${_cm5_commit}.tar.gz::https://github.com/yota9/uconsole-cm5/archive/${_cm5_commit}.tar.gz"
+  "clockworkpi-uconsole-overlay.dts::https://raw.githubusercontent.com/ClusterM/ClockworkPi-linux/${_cm4_commit}/arch/arm/boot/dts/overlays/clockworkpi-uconsole-overlay.dts"
+)
+sha256sums=(
+  'bd03be0b091354bf6a047ca41d0c8198f124d4a12e396647fd0b0f257a7ee4e9'
+  '0230f95a393ddcb9f9d7e9652646376b739fad22a7d6889066fabe47c04d8875'
+)
+
+build() {
+  dtc -@ -I dts -O dtb -o clockworkpi-uconsole-cm4.dtbo clockworkpi-uconsole-overlay.dts
+  dtc -@ -I dts -O dtb -o uconsole-cm5-base.dtbo \
+    "uconsole-cm5-${_cm5_commit}/overlay/uconsole-cm5-base-overlay.dts"
+  dtc -@ -I dts -O dtb -o uconsole-audio-cm5.dtbo \
+    "uconsole-cm5-${_cm5_commit}/overlay/uconsole-audio-cm5-overlay.dts"
+}
+
+package() {
+  cp -a "${startdir}/rootfs/." "${pkgdir}/"
+  python "${startdir}/build-papirus-theme.py" /usr/share/icons \
+    "${pkgdir}/usr/share/icons/Papirus-Dark-Deeporange"
+  install -d "${pkgdir}/usr/lib/systemd/user/graphical-session.target.wants"
+  ln -s ../uconsole-theme-sync.service \
+    "${pkgdir}/usr/lib/systemd/user/graphical-session.target.wants/uconsole-theme-sync.service"
+  install -d "${pkgdir}/usr/share/omarchy/themes/uconsole/backgrounds"
+  magick -background none "${startdir}/rootfs/usr/share/uconsole/omarchy/wallpaper.svg" \
+    "${pkgdir}/usr/share/omarchy/themes/uconsole/backgrounds/field-terminal.png"
+  cp "${pkgdir}/usr/share/omarchy/themes/uconsole/backgrounds/field-terminal.png" \
+    "${pkgdir}/usr/share/omarchy/themes/uconsole/preview.png"
+  install -Dm0644 "${startdir}/../uconsole-modules-linux-rpi/PKGBUILD" \
+    "${pkgdir}/usr/share/uconsole/kernel-package/PKGBUILD"
+  install -Dm0644 "${startdir}/../uconsole-modules-linux-rpi/uconsole-modules-linux-rpi.install" \
+    "${pkgdir}/usr/share/uconsole/kernel-package/uconsole-modules-linux-rpi.install"
+  install -Dm0644 clockworkpi-uconsole-cm4.dtbo \
+    "${pkgdir}/boot/overlays/clockworkpi-uconsole-cm4.dtbo"
+  install -Dm0644 uconsole-cm5-base.dtbo \
+    "${pkgdir}/boot/overlays/uconsole-cm5-base.dtbo"
+  install -Dm0644 uconsole-audio-cm5.dtbo \
+    "${pkgdir}/boot/overlays/uconsole-audio-cm5.dtbo"
+  find "${pkgdir}/usr/bin" "${pkgdir}/usr/lib/uconsole" -type f -exec chmod 0755 {} +
+}

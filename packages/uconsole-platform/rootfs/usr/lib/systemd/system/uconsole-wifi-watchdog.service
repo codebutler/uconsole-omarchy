@@ -1,0 +1,7 @@
+[Unit]
+Description=Recover a wedged uConsole Wi-Fi link
+After=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/uconsole/wifi-watchdog

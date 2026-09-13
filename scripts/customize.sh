@@ -1,332 +1,140 @@
 #!/usr/bin/env bash
-#
-# Initial customization run inside the chroot.
-# Invoked by build.sh via qemu-aarch64-static.
-# Reads the environment variables UC_HOSTNAME / TIMEZONE / LOCALE.
-#
-# Non-fatal steps continue on failure so the image stays usable.
-set -uo pipefail
+# Customize an extracted Arch Linux ARM root into a universal Omarchy uConsole.
+set -euo pipefail
 
 UC_HOSTNAME="${UC_HOSTNAME:-uconsole}"
-TIMEZONE="${TIMEZONE:-Asia/Tokyo}"
+TIMEZONE="${TIMEZONE:-America/New_York}"
 LOCALE="${LOCALE:-en_US.UTF-8}"
-# Optional HackerGadgets AIO extension board ("", "v1" or "v2"); set by build.sh.
-AIO_BOARD="${AIO_BOARD:-}"
+ROOT_PARTUUID="${ROOT_PARTUUID:?ROOT_PARTUUID is required}"
+SOURCE_ROOT="${SOURCE_ROOT:-/root/uconsole-source}"
+LOCAL_REPO="${LOCAL_REPO:-/var/cache/uconsole/repo}"
+OMARCHY_REPO="${OMARCHY_REPO:-https://pkgs.omarchy.org/edge/aarch64}"
+OMARCHY_KEY=40DFB630FF42BCFFB047046CF0134EE680CAC571
+PAC=(pacman --disable-sandbox)
 
-# Under qemu-user emulation, pacman's sandbox (Landlock) is unavailable and
-# fails with "Landlock is not supported by the kernel", so disable it.
-PAC="pacman --disable-sandbox"
+log() { printf '\n==> [image] %s\n' "$*"; }
 
-echo "==> [chroot] initializing pacman keyring"
-pacman-key --init          || echo "!! pacman-key --init failed (continuing)"
-pacman-key --populate archlinuxarm || echo "!! populate failed (continuing)"
+log "Initialize Arch Linux ARM signing keys"
+pacman-key --init
+pacman-key --populate archlinuxarm
+"${PAC[@]}" -Sy --noconfirm --needed archlinuxarm-keyring archlinux-keyring
 
-# Refresh the keyrings first. The ALARM base tarball ships a baked-in keyring
-# that may be too old, which makes later package installs fail with signature
-# errors ("signature is unknown trust" / "invalid or corrupted package").
-# best-effort: continue even if this fails.
-echo "==> [chroot] refreshing keyrings"
-${PAC} -Sy --noconfirm --needed archlinuxarm-keyring archlinux-keyring \
-  || echo "!! keyring refresh failed (continuing)"
+log "Trust the official Omarchy package signing key"
+pacman-key --recv-keys "${OMARCHY_KEY}" --keyserver hkps://keys.openpgp.org
+pacman-key --lsign-key "${OMARCHY_KEY}"
+if ! grep -q '^\[omarchy\]' /etc/pacman.conf; then
+  # Omarchy rebuilds a small set of Arch packages as an ABI-matched unit.  Its
+  # repository must precede [extra], otherwise pacman selects ALARM's package
+  # with the same name even when Omarchy's Hyprland stack is newer.
+  sed -i "/^\[core\]/i\\
+[omarchy]\\
+SigLevel = Required DatabaseOptional\\
+Server = ${OMARCHY_REPO}\\
+" /etc/pacman.conf
+fi
 
-# --- Remove stock kernel / U-Boot ------------------------------------
-# Our self-built kernel (kernel8-cm4.img / overlays / modules) is already
-# placed as files by build.sh's install_kernel(). Here we only remove the
-# unused stock linux-aarch64 (an unused kernel8.img + modules) and
-# uboot-raspberrypi (kernel8.img = U-Boot).
-# -Rdd: stop the dependency cascade to protect raspberrypi-bootloader firmware.
-echo "==> [chroot] removing stock kernel / U-Boot (using self-built kernel)"
+log "Trust and enable the image's signed uConsole package repository"
+repo_key="${LOCAL_REPO}/uconsole-repo-key.asc"
+repo_fpr="$(cat "${LOCAL_REPO}/uconsole-repo-key.fingerprint")"
+pacman-key --add "${repo_key}"
+pacman-key --lsign-key "${repo_fpr}"
+if ! grep -q '^\[uconsole\]' /etc/pacman.conf; then
+  cat >> /etc/pacman.conf <<EOF
+
+[uconsole]
+SigLevel = Required DatabaseRequired
+Server = file://${LOCAL_REPO}
+EOF
+fi
+
+log "Replace the generic ALARM boot stack with package-managed linux-rpi"
 for pkg in linux-aarch64 uboot-raspberrypi; do
-  if pacman -Qq "${pkg}" &>/dev/null; then
-    echo "   - remove ${pkg}"
-    ${PAC} -Rdd --noconfirm "${pkg}" || echo "!! failed to remove ${pkg} (continuing)"
+  if pacman -Qq "${pkg}" >/dev/null 2>&1; then
+    "${PAC[@]}" -Rdd --noconfirm "${pkg}"
   fi
 done
 
-# Prevent a later on-device `pacman -Syu` from pulling the stock kernel / U-Boot
-# back in (which would clobber our /boot setup). Pin them as ignored.
-echo "==> [chroot] pinning IgnorePkg (linux-aarch64, uboot-raspberrypi)"
-if ! grep -q '^IgnorePkg' /etc/pacman.conf; then
-  sed -i 's/^#\s*IgnorePkg.*/IgnorePkg = linux-aarch64 uboot-raspberrypi/' /etc/pacman.conf
-  grep -q '^IgnorePkg' /etc/pacman.conf \
-    || echo 'IgnorePkg = linux-aarch64 uboot-raspberrypi' >> /etc/pacman.conf
-fi
+log "Install full Omarchy package set and the 4K Raspberry Pi kernel"
+mapfile -t packages < <(sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' \
+  "${SOURCE_ROOT}/config/omarchy/packages.txt")
+"${PAC[@]}" -Syu --noconfirm
+"${PAC[@]}" -S --needed --noconfirm omarchy-keyring omarchy "${packages[@]}"
 
-# Disable pacman's download sandbox on the target system too. Our self-built
-# kernel (bcm2711_defconfig) has no CONFIG_SECURITY_LANDLOCK, so an on-device
-# `pacman -Syu` otherwise dies with "Landlock is not supported by the kernel".
-# GPG signature verification (SigLevel) is unaffected; only the network-facing
-# downloader's isolation is dropped. Insert inside [options] so it takes effect.
-echo "==> [chroot] disabling pacman sandbox (kernel lacks Landlock)"
-if ! grep -q '^DisableSandbox' /etc/pacman.conf; then
-  sed -i '/^\[options\]/a DisableSandbox' /etc/pacman.conf
-fi
+log "Install uConsole hardware packages"
+# Package filenames are intentionally stable across identical builds, while an
+# image-local signing key is generated for each build.  Never reuse a package
+# cached from an earlier build/key pair.
+rm -f /var/cache/pacman/pkg/uconsole-*.pkg.tar.*
+"${PAC[@]}" -S --needed --noconfirm \
+  uconsole-modules-linux-rpi uconsole-platform uconsole-aiov2-ctl
 
-# Persist the journal for first-boot debugging (no display / no boot, etc.).
-# Once it has booted, you can pull /var/log/journal off the SD to inspect it.
-echo "==> [chroot] enabling persistent journald"
-mkdir -p /var/log/journal
-
-# --- First-boot root filesystem expansion ----------------------------
-# The image is built at a fixed IMG_SIZE (e.g. 6G), so a freshly flashed SD
-# card only exposes that much space regardless of its real capacity. Grow the
-# root partition + ext4 to fill the whole card on the first boot, then disable
-# the service (a stamp file guards it so it only runs once).
-#
-# Uses only tools already present in the ALARM base (sfdisk from util-linux,
-# resize2fs from e2fsprogs) so it needs no extra packages and works offline.
-echo "==> [chroot] installing first-boot root-fs expansion service"
-cat > /usr/local/sbin/uconsole-resize-rootfs <<'RESIZE'
-#!/usr/bin/env bash
-# Grow the root partition and its filesystem to fill the storage device.
-set -uo pipefail
-
-ROOT_SRC="$(findmnt -no SOURCE /)"   # e.g. /dev/mmcblk0p2 or /dev/sda2
-case "${ROOT_SRC}" in
-  /dev/*[0-9]p[0-9]*)  # mmcblk0p2, nvme0n1p2 -> disk keeps its trailing digit
-    DISK="${ROOT_SRC%p[0-9]*}"
-    PART="${ROOT_SRC##*p}" ;;
-  /dev/*[0-9])         # sda2 -> sda, 2
-    PART="${ROOT_SRC##*[!0-9]}"
-    DISK="${ROOT_SRC%"${PART}"}" ;;
-  *)
-    echo "uconsole-resize-rootfs: cannot parse root device '${ROOT_SRC}'" >&2
-    exit 1 ;;
-esac
-
-echo "uconsole-resize-rootfs: growing ${DISK} partition ${PART}"
-# ',+' = keep the start, extend the size to the end of the device.
-echo ',+' | sfdisk -N "${PART}" --no-reread --force "${DISK}" || true
-partx -u "${DISK}" 2>/dev/null || partprobe "${DISK}" 2>/dev/null || true
-
-# Online-resize the mounted ext4 root. resize2fs is idempotent, so this is a
-# no-op if the filesystem already fills the partition.
-resize2fs "${ROOT_SRC}"
-RESIZE
-chmod 0755 /usr/local/sbin/uconsole-resize-rootfs
-
-cat > /etc/systemd/system/uconsole-resize-rootfs.service <<'UNIT'
-[Unit]
-Description=Expand root filesystem to fill the storage on first boot
-ConditionPathExists=/var/lib/uconsole-resize-rootfs.stamp
-After=systemd-remount-fs.service
-Before=multi-user.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/uconsole-resize-rootfs
-# Only removed when ExecStart succeeded; a failure keeps the stamp so it
-# retries on the next boot.
-ExecStartPost=/usr/bin/rm -f /var/lib/uconsole-resize-rootfs.stamp
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-
-# The stamp both arms the service (ConditionPathExists) and, once removed on
-# success, prevents it from ever running again.
-mkdir -p /var/lib
-: > /var/lib/uconsole-resize-rootfs.stamp
-systemctl enable uconsole-resize-rootfs.service || true
-
-echo "==> [chroot] timezone: ${TIMEZONE}"
+log "Configure locale, clock, hostname, and the initial user"
 ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /etc/localtime
-
-echo "==> [chroot] locale: ${LOCALE}"
-sed -i "s/^#\s*\(${LOCALE//./\\.} \)/\1/" /etc/locale.gen
-grep -q "^${LOCALE}" /etc/locale.gen || echo "${LOCALE} UTF-8" >> /etc/locale.gen
+escaped_locale="${LOCALE//./\.}"
+sed -i "s/^#[[:space:]]*\(${escaped_locale}[[:space:]]\)/\1/" /etc/locale.gen
+grep -q "^${LOCALE}[[:space:]]" /etc/locale.gen || echo "${LOCALE} UTF-8" >> /etc/locale.gen
 locale-gen
-echo "LANG=${LOCALE}" > /etc/locale.conf
-
-echo "==> [chroot] hostname: ${UC_HOSTNAME}"
-echo "${UC_HOSTNAME}" > /etc/hostname
+printf 'LANG=%s\n' "${LOCALE}" > /etc/locale.conf
+printf 'LANG=%s\n' "${LOCALE}" > /etc/environment
+printf '%s\n' "${UC_HOSTNAME}" > /etc/hostname
 cat > /etc/hosts <<EOF
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   ${UC_HOSTNAME}.localdomain ${UC_HOSTNAME}
+127.0.0.1 localhost
+::1 localhost
+127.0.1.1 ${UC_HOSTNAME}.localdomain ${UC_HOSTNAME}
+EOF
+install -d /var/log/journal /var/lib/uconsole
+: > /var/lib/uconsole/resize-rootfs.pending
+
+id alarm >/dev/null 2>&1 || useradd -m -G wheel,video,input,audio -s /bin/bash alarm
+usermod -aG wheel,video,input,audio alarm
+install -Dm0440 /dev/stdin /etc/sudoers.d/10-alarm <<'EOF'
+%wheel ALL=(ALL:ALL) ALL
 EOF
 
-# Install and enable network management (NetworkManager).
-# best-effort: keep the image usable even if this fails (e.g. no network).
-echo "==> [chroot] installing NetworkManager"
-if ${PAC} -Sy --noconfirm --needed networkmanager sudo; then
-  systemctl enable NetworkManager || true
-else
-  echo "!! package install failed (continuing)"
+log "Provision Omarchy's per-user configuration"
+cp -a -n /etc/skel/. /home/alarm/
+chown -R alarm:alarm /home/alarm
+if command -v omarchy-provision-user >/dev/null; then
+  runuser -u alarm -- env HOME=/home/alarm USER=alarm \
+    OMARCHY_SETUP_CONTEXT=provision-owner omarchy-provision-user --first-install
 fi
+install -Dm0644 /usr/share/uconsole/omarchy/monitors.lua /home/alarm/.config/hypr/monitors.lua
+install -Dm0644 /usr/share/uconsole/omarchy/looknfeel.lua /home/alarm/.config/hypr/looknfeel.lua
+install -Dm0644 /usr/share/uconsole/omarchy/bindings-loader.lua /home/alarm/.config/hypr/bindings.lua
+chown -R alarm:alarm /home/alarm/.config
+uconsole-initialize-login
+uconsole-configure-omarchy-updates
+uconsole-configure-omarchy-display
+runuser -u alarm -- env HOME=/home/alarm USER=alarm OMARCHY_PATH=/usr/share/omarchy \
+  OMARCHY_THEME_HEADLESS=1 uconsole-configure-handheld-user --theme
 
-# WiFi power management: the brcmfmac driver occasionally puts the chip to
-# sleep and fails to recover, causing rare WiFi drops that require a manual
-# reconnect. Disable power saving permanently for all connections.
-echo "==> [chroot] disabling WiFi power save (brcmfmac)"
-mkdir -p /etc/NetworkManager/conf.d
-cat > /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'EOF'
-[connection]
-wifi.powersave=2
-EOF
+log "Select the safe platform services"
+systemctl disable systemd-networkd.service systemd-networkd.socket \
+  systemd-networkd-wait-online.service systemd-timesyncd.service 2>/dev/null || true
+systemctl mask systemd-networkd.service systemd-networkd.socket \
+  systemd-networkd-wait-online.service systemd-timesyncd.service
+systemctl enable NetworkManager.service NetworkManager-wait-online.service chronyd.service
+systemctl enable bluetooth.service cups.service avahi-daemon.service systemd-resolved.service
+systemctl enable sddm.service tailscaled.service
+systemctl enable uconsole-initialize-login.service
+systemctl enable uconsole-resize-rootfs.service uconsole-speaker-amp.service \
+  uconsole-wifi-watchdog.timer uconsole-gamepad-keys.service
+systemctl enable aiov2-rails-boot.service
+systemctl set-default graphical.target
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
-# WiFi recovery watchdog: power save is not the only way the brcmfmac link
-# wedges. On WPA2/WPA3-transition, band-steering APs a background-scan roam to
-# another BSSID can fail SAE external auth (kernel: "brcmf_cfg80211_external_auth:
-# External authentication failed"), and the driver sometimes stays "connected"
-# while passing no traffic -- in both cases WiFi is dead until a manual `nmcli`
-# reconnect. A 30s timer detects the wedged state and forces NetworkManager to
-# reconnect wlan0, so the link self-heals. Uses only NetworkManager + iproute2 +
-# iputils (all already present). See MAINTAINING "WiFi instability".
-echo "==> [chroot] installing WiFi recovery watchdog (systemd timer)"
-mkdir -p /usr/local/sbin
-cat > /usr/local/sbin/uconsole-wifi-watchdog <<'WD'
-#!/usr/bin/env bash
-# Recover the CM4 onboard brcmfmac WiFi when it wedges (see customize.sh).
-set -u
-IFACE=wlan0
+log "Install universal boot configuration and regenerate the initramfs"
+uconsole-install-boot-config "${ROOT_PARTUUID}"
+mkinitcpio -P
 
-# Nothing to do if the interface is absent or the radio is switched off.
-[[ -e "/sys/class/net/${IFACE}" ]] || exit 0
-[[ "$(nmcli -t -f WIFI radio 2>/dev/null)" == enabled ]] || exit 0
+log "Remove build-only packages and machine-specific state"
+"${PAC[@]}" -Rns --noconfirm linux-rpi-headers 2>/dev/null || true
+# dtc remains installed because raspberrypi-utils uses it at runtime.
+"${PAC[@]}" -Sc --noconfirm
+rm -rf /var/lib/NetworkManager/* /var/lib/tailscale/* /etc/ssh/ssh_host_* \
+  /var/lib/systemd/random-seed /root/.cache /home/alarm/.cache
+rm -f /etc/machine-id
+: > /etc/machine-id
+find /root /home/alarm -maxdepth 2 -type f -name '*history*' -delete 2>/dev/null || true
 
-# Only manage the link if an autoconnectable wifi profile exists, so we never
-# fight a user who deliberately disconnected.
-if ! nmcli -t -f TYPE,AUTOCONNECT connection show 2>/dev/null \
-    | grep -q '^802-11-wireless:yes'; then
-  exit 0
-fi
-
-state=$(nmcli -t -f DEVICE,STATE device 2>/dev/null \
-  | awk -F: -v i="$IFACE" '$1==i{print $2}')
-
-case "${state}" in
-  connected)
-    # L2 is up; confirm L3 by pinging the default gateway (LAN-local, cheap). A
-    # wedged brcmfmac often stays "connected" while passing no traffic. Require
-    # two failed probes a few seconds apart to avoid acting on a single loss.
-    gw=$(ip -4 route show default dev "${IFACE}" 2>/dev/null | awk '{print $3; exit}')
-    [[ -n "${gw}" ]] || exit 0
-    ping -c1 -W2 -I "${IFACE}" "${gw}" >/dev/null 2>&1 && exit 0
-    sleep 3
-    ping -c2 -W2 -I "${IFACE}" "${gw}" >/dev/null 2>&1 && exit 0
-    logger -t uconsole-wifi-watchdog "gateway ${gw} unreachable; reconnecting ${IFACE}"
-    nmcli device reconnect "${IFACE}" >/dev/null 2>&1 || true
-    ;;
-  disconnected)
-    # NM failed to recover on its own; force a reconnect to the best BSSID.
-    logger -t uconsole-wifi-watchdog "device ${IFACE} disconnected; forcing connect"
-    nmcli device connect "${IFACE}" >/dev/null 2>&1 || true
-    ;;
-  *)
-    # connecting / unavailable / unmanaged: an attempt is in progress or the
-    # device is not ours to touch -- leave it alone.
-    exit 0
-    ;;
-esac
-WD
-chmod +x /usr/local/sbin/uconsole-wifi-watchdog
-cat > /etc/systemd/system/uconsole-wifi-watchdog.service <<'UNIT'
-[Unit]
-Description=uConsole WiFi recovery watchdog (recover wedged brcmfmac link)
-After=NetworkManager.service
-Wants=NetworkManager.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/sbin/uconsole-wifi-watchdog
-UNIT
-cat > /etc/systemd/system/uconsole-wifi-watchdog.timer <<'UNIT'
-[Unit]
-Description=Run the uConsole WiFi recovery watchdog periodically
-
-[Timer]
-OnBootSec=60
-OnUnitActiveSec=30
-AccuracySec=5s
-
-[Install]
-WantedBy=timers.target
-UNIT
-systemctl enable uconsole-wifi-watchdog.timer || true
-
-# --- Internal speaker amplifier enable -------------------------------
-# The uConsole's onboard speaker amplifier is gated by an enable GPIO
-# (BCM11 / gpiochip0 line 11). Headphones bypass the amp, so without this the
-# 3.5mm jack works but the built-in speaker stays SILENT. The firmware
-# `gpio=11=op,dh` in config.txt is NOT enough: like the AIO rails, it is
-# released once the kernel GPIO subsystem initialises. Hold BCM11 high from
-# userspace with gpioset (libgpiod v2 keeps the line while the process runs).
-# This only enables the hardware path; the audio userspace (alsa-utils /
-# PipeWire) is still up to the user -- see README "Audio".
-echo "==> [chroot] installing speaker-amp GPIO-enable service (libgpiod)"
-${PAC} -Sy --noconfirm --needed libgpiod || echo "!! libgpiod install failed (continuing)"
-cat > /etc/systemd/system/uconsole-speaker-amp.service <<'UNIT'
-[Unit]
-Description=Enable the uConsole internal speaker amplifier (hold BCM11 high)
-# Headphones bypass the amp; without this the built-in speaker is silent. The
-# firmware config.txt "gpio=11=op,dh" is released when the kernel GPIO subsystem
-# comes up, so hold BCM11 (gpiochip0 line 11) high from userspace instead.
-DefaultDependencies=no
-After=sysinit.target
-Before=basic.target
-
-[Service]
-Type=simple
-# gpioset (libgpiod v2) holds the requested line value until the process exits,
-# so keep it in the foreground and let systemd restart it if it ever dies.
-ExecStart=/usr/bin/gpioset -C uconsole-speaker-amp -c gpiochip0 11=1
-Restart=always
-RestartSec=2
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-systemctl enable uconsole-speaker-amp.service || true
-
-# --- Optional AIO extension board ------------------------------------
-# When enabled, keep the kernel's DVB TV drivers off the RTL-SDR dongle so
-# libusb userspace tools (rtl_test, SDR++, etc.) can claim it. The RTC, SPI and
-# GPS are handled by the config.txt overlays (see build.sh apply_aio_config);
-# the kernel binds /dev/rtc0 and systemd reads it at boot, so no extra service.
-if [[ -n "${AIO_BOARD}" ]]; then
-  echo "==> [chroot] AIO board (${AIO_BOARD}): blacklisting RTL2832 DVB drivers"
-  cat > /etc/modprobe.d/aio-rtl-sdr.conf <<'BLACKLIST'
-# HackerGadgets AIO board: free the RTL-SDR dongle for libusb userspace tools.
-blacklist dvb_usb_rtl28xxu
-blacklist rtl2832
-blacklist rtl2830
-BLACKLIST
-fi
-
-# V2: the GPS/LoRa/SDR/internal-USB rails are gated behind GPIO enable pins. The
-# firmware `gpio=...=op,dh` in config.txt drives them high at boot, but that is
-# RELEASED once the kernel GPIO subsystem comes up (~8s in), so the rails power
-# off again (verified on hardware: the RTL-SDR enumerates then USB-disconnects).
-# Re-assert and HOLD them from userspace with gpioset (libgpiod v2 keeps the
-# lines while the process runs). BCM: SDR=7, LoRa=16, USB=23, GPS=27 (gpiochip0).
-if [[ "${AIO_BOARD}" == v2 ]]; then
-  echo "==> [chroot] AIO v2: installing GPIO power-hold service (libgpiod)"
-  ${PAC} -Sy --noconfirm --needed libgpiod || echo "!! libgpiod install failed (continuing)"
-  cat > /etc/systemd/system/uconsole-aio-gpio.service <<'UNIT'
-[Unit]
-Description=Hold HackerGadgets AIO V2 enable GPIOs high (GPS/LoRa/SDR/internal-USB)
-Documentation=https://hackergadgets.com/pages/hackergadgets-uconsole-rtl-sdr-lora-gps-rtc-usb-hub-all-in-one-extension-board-setup-guide
-# The firmware config.txt "gpio=...=op,dh" directive is released once the kernel
-# GPIO subsystem comes up, so the V2 rails power off (~8s after boot). Re-assert
-# and hold them from userspace. BCM: SDR=7, LoRa=16, USB=23, GPS=27 on gpiochip0.
-DefaultDependencies=no
-After=sysinit.target
-Before=basic.target
-
-[Service]
-Type=simple
-# gpioset (libgpiod v2) holds the requested line values until the process exits,
-# so keep it in the foreground and let systemd restart it if it ever dies.
-ExecStart=/usr/bin/gpioset -C uconsole-aio -c gpiochip0 7=1 16=1 23=1 27=1
-Restart=always
-RestartSec=2
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-  systemctl enable uconsole-aio-gpio.service || true
-fi
-
-echo "==> [chroot] customization complete"
+log "Customization complete"

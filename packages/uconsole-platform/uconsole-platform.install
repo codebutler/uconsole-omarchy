@@ -1,0 +1,17 @@
+post_install() {
+  systemctl preset uconsole-resize-rootfs.service uconsole-wifi-watchdog.timer \
+    uconsole-speaker-amp.service uconsole-gamepad-keys.service uconsole-initialize-login.service chronyd.service >/dev/null 2>&1 || true
+  uconsole-install-boot-config || true
+  uconsole-configure-console
+  local path kver
+  for path in /usr/lib/modules/*/updates/uconsole; do
+    [ -d "${path}" ] || continue
+    kver="$(basename "$(dirname "$(dirname "${path}")")")"
+    depmod -a "${kver}"
+  done
+  mkinitcpio -P
+}
+
+post_upgrade() {
+  post_install
+}

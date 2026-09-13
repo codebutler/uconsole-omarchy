@@ -1,0 +1,12 @@
+xkb_keymap {
+    xkb_keycodes { include "evdev+aliases(qwerty)" };
+    xkb_types { include "complete" };
+    xkb_compat { include "complete" };
+    xkb_symbols {
+        include "pc+us+inet(evdev)"
+        key <FK13> { type="ONE_LEVEL", [ F13 ] };
+        key <FK14> { type="ONE_LEVEL", [ F14 ] };
+        key <FK15> { type="ONE_LEVEL", [ F15 ] };
+        key <FK16> { type="ONE_LEVEL", [ F16 ] };
+    };
+};

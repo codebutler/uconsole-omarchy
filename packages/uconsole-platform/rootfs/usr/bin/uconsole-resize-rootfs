@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+root_src="$(findmnt -no SOURCE -T /)"
+root_src="$(readlink -f "${root_src}")"
+case "${root_src}" in
+  /dev/mmcblk*p[0-9]*|/dev/nvme*n*p[0-9]*)
+    disk="${root_src%p[0-9]*}"
+    part="${root_src##*p}" ;;
+  /dev/[sv]d*[0-9]*)
+    part="${root_src##*[!0-9]}"
+    disk="${root_src%"${part}"}" ;;
+  *)
+    echo "uconsole-resize-rootfs: unsupported root device ${root_src}" >&2
+    exit 1 ;;
+esac
+
+echo ',+' | sfdisk -N "${part}" --no-reread --force "${disk}"
+partx -u "${disk}" 2>/dev/null || partprobe "${disk}" 2>/dev/null || true
+udevadm settle --timeout=10 || true
+resize2fs "${root_src}"

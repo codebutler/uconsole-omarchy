@@ -1,0 +1,11 @@
+[Unit]
+Description=Hold the CM4 uConsole speaker amplifier enable line
+After=systemd-udev-settle.service
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/uconsole/speaker-amp
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

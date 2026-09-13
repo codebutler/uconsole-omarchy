@@ -1,0 +1,10 @@
+[Unit]
+Description=Periodically check uConsole Wi-Fi
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30s
+RandomizedDelaySec=5s
+
+[Install]
+WantedBy=timers.target

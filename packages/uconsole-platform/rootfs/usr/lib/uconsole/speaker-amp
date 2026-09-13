@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+compatible="$(tr '\0' ' ' </proc/device-tree/compatible 2>/dev/null || true)"
+[[ "${compatible}" == *bcm2711* ]] || exit 0
+exec gpioset --strict GPIO11=1

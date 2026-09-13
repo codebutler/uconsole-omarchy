@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = uconsole-platform
+Target = upower
+
+[Action]
+Description = Apply uConsole charging limit and critical-battery shutdown policy
+When = PostTransaction
+Exec = /usr/bin/uconsole-apply-power-policy

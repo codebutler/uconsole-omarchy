@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = omarchy
+Target = uconsole-platform
+
+[Action]
+Description = Integrating version-matched uConsole drivers with Omarchy updates
+When = PostTransaction
+Exec = /usr/bin/uconsole-configure-omarchy-updates

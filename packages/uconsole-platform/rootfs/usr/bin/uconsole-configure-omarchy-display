@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""Apply bounded small-screen adaptations, preserving upstream backups."""
+from pathlib import Path
+import shutil
+
+ROOT = Path("/usr/share/omarchy")
+BACKUPS = Path("/var/lib/uconsole/omarchy-display-upstream")
+RESOURCES = Path("/usr/share/uconsole/omarchy")
+
+
+def adapt(path, replacements):
+    original = path.read_text()
+    updated = original
+    for before, after in replacements:
+        if after in updated:
+            continue
+        if updated.count(before) != 1:
+            raise RuntimeError(f"Upstream changed; refusing to patch {path}: {before!r}")
+        updated = updated.replace(before, after, 1)
+    if updated != original:
+        backup = BACKUPS / path.relative_to(ROOT)
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, backup)
+        path.write_text(updated)
+
+
+def main():
+    gnome_theme = ROOT / "bin/omarchy-theme-set-gnome"
+    if gnome_theme.exists():
+        adapt(gnome_theme, [("# Change gnome icon theme color\n",
+                            "/usr/bin/uconsole-sync-gtk-theme\n\n# Change gnome icon theme color\n")])
+    picker = ROOT / "shell/plugins/image-picker/ImagePicker.qml"
+    if picker.exists():
+        adapt(picker, [
+            ("property int expandedWidth: 768",
+             "property int expandedWidth: Math.max(80, Math.min(768, panel.width - 64, expandedHeight * 768 / 475))"),
+            ("property int expandedHeight: 475",
+             "property int expandedHeight: Math.max(80, Math.min(475, panel.height - Style.space(30) - bottomChromeHeight - 32))"),
+            ("property int sliceHeight: 432",
+             "property int sliceHeight: Math.round(expandedHeight * 432 / 475)"),
+            ("width: root.expandedWidth + 13 * (root.sliceWidth + root.sliceSpacing)",
+             "width: parent.width // uConsole: keep carousel inside the available viewport"),
+            ("clip: false", "clip: true // uConsole: crop only offscreen neighboring previews"),
+        ])
+    screensaver = ROOT / "default/foot/screensaver.ini"
+    if screensaver.exists():
+        adapt(screensaver, [("font=JetBrainsMono Nerd Font:size=18",
+                             "font=JetBrainsMono Nerd Font:size=10")])
+    idle = ROOT / "shell/plugins/services/idle/Service.qml"
+    if idle.exists():
+        block = (RESOURCES / "idle-dim.qml").read_text()
+        adapt(idle, [("  id: root\n", "  id: root\n" + block)])
+    browser = ROOT / "bin/omarchy-menu-keybindings"
+    if browser.exists():
+        # Its source scanner skips submap callbacks by default. Run them in its
+        # existing fake-hl environment so keycode descriptions remain resolvable.
+        adapt(browser, [("  dsp = dsp_proxy(\"hl.dsp\"),\n",
+                         '  dsp = dsp_proxy("hl.dsp"),\n'
+                         '  define_submap = function(name, reset, callback)\n'
+                         '    if type(reset) == "function" then reset() elseif callback then callback() end\n'
+                         '  end,\n')])
+
+
+if __name__ == "__main__":
+    main()

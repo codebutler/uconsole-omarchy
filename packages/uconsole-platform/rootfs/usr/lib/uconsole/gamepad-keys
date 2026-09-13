@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+"""Mirror the four uConsole face buttons as F13-F16 without grabbing the gamepad."""
+import glob
+import os
+import time
+from evdev import InputDevice, UInput, ecodes
+
+SOURCE = {291: ecodes.KEY_F13, 288: ecodes.KEY_F14,
+          290: ecodes.KEY_F15, 289: ecodes.KEY_F16}
+
+
+def find_device():
+    for path in glob.glob("/dev/input/event*"):
+        try:
+            dev = InputDevice(path)
+            if dev.info.vendor == 0x1EAF and dev.info.product == 0x0024:
+                keys = set(dev.capabilities().get(ecodes.EV_KEY, []))
+                if set(SOURCE).issubset(keys):
+                    return dev
+            dev.close()
+        except (OSError, PermissionError):
+            pass
+    return None
+
+
+while True:
+    source = find_device()
+    if source is None:
+        time.sleep(2)
+        continue
+    try:
+        with UInput({ecodes.EV_KEY: list(SOURCE.values())},
+                    name="uconsole-gamepad-keys", vendor=0x1EAF,
+                    product=0x0025) as output:
+            for event in source.read_loop():
+                if event.type == ecodes.EV_KEY and event.code in SOURCE:
+                    output.write(ecodes.EV_KEY, SOURCE[event.code], event.value)
+                    output.syn()
+    except OSError:
+        time.sleep(1)
+    finally:
+        source.close()

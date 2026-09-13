@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+"""Set the recovery console font while preserving locale and keymap settings."""
+from pathlib import Path
+import re
+import shutil
+
+path = Path("/etc/vconsole.conf")
+original = path.read_text() if path.exists() else ""
+updated = re.sub(r"^FONT=.*\n?", "", original, flags=re.MULTILINE)
+updated = updated.rstrip() + "\nFONT=ter-128n\n"
+if updated != original:
+    backup = path.with_name("vconsole.conf.before-uconsole")
+    if path.exists() and not backup.exists():
+        shutil.copy2(path, backup)
+    path.write_text(updated)

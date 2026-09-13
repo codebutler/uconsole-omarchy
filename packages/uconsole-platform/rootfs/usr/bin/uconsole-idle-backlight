@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Save/dim/restore the panel, called by Omarchy's inhibitor-aware idle service."""
+import argparse
+import fcntl
+import os
+from pathlib import Path
+
+
+def update(action, device, state):
+    brightness = device / "brightness"
+    current = int(brightness.read_text())
+    maximum = int((device / "max_brightness").read_text())
+    dim = min(1, maximum)
+    if action == "dim":
+        if state.exists() or current <= dim:
+            return
+        state.write_text(str(current))
+        try:
+            brightness.write_text(str(dim))
+        except OSError:
+            state.unlink()
+            raise
+    elif state.exists():
+        saved = max(0, min(maximum, int(state.read_text())))
+        # A manual adjustment while dimmed takes precedence over the saved level.
+        if current <= dim:
+            brightness.write_text(str(saved))
+        state.unlink()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=("dim", "restore"))
+    args = parser.parse_args()
+    runtime = Path(os.environ["XDG_RUNTIME_DIR"])
+    devices = list(Path("/sys/class/backlight").glob("*"))
+    if len(devices) != 1:
+        raise SystemExit("Expected exactly one uConsole panel backlight")
+    with (runtime / "uconsole-dim.lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        update(args.action, devices[0], runtime / "uconsole-saved-brightness")
+
+
+if __name__ == "__main__":
+    main()

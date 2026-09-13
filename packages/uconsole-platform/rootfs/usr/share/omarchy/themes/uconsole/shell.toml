@@ -1,0 +1,19 @@
+# Keep native Omarchy components, tuned for the 800x450 logical panel.
+[font]
+base-size = 12
+[bar]
+size-horizontal = 26
+background = "#0e0f10"
+text = "#d4d7d2"
+active = "#ff6b1a"
+[controls]
+normal-color = "foreground"
+normal-border-width = 1
+normal-border-alpha = 0.18
+hover-cursor-color = "accent"
+hover-cursor-border-alpha = 0.8
+selected-color = "accent"
+selected-fill-alpha = 0.12
+selected-border-width = 1
+selected-border-alpha = 1.0
+selection-color = "accent"

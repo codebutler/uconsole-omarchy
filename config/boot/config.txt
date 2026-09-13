@@ -1,47 +1,29 @@
-# ============================================================
-# ClockworkPi uConsole - boot configuration (CM4)
-# Base: Arch Linux ARM rpi-aarch64 + self-built kernel
-#   ak-rex/ClockworkPi-linux (rpi-6.12.y) built via scripts/build-kernel.sh
-#
-# The stock linux-aarch64 / uboot-raspberrypi are removed in build.sh, and the
-# RPi firmware boots kernel8-cm4.img directly.
-# The DSI panel (cwu50) works via the clockworkpi-uconsole-cm4 overlay + the
-# 6.12.y driver. For the new-batch LCD, panel-cwu50 auto-detects via id_gpio
-# and uses init_sequence2.
-# ============================================================
-
+# Reference copy; the packaged template is authoritative.
 [all]
-arm_boost=1
 arm_64bit=1
 ignore_lcd=1
 max_framebuffers=2
 disable_overscan=1
-dtparam=audio=on
+disable_fw_kms_setup=1
+camera_auto_detect=1
+display_auto_detect=0
 dtparam=ant2
-# Enable the serial console (GPIO14/15, 115200) to capture boot logs.
 enable_uart=1
+initramfs initramfs-linux.img followkernel
 
-# ============================================================
-# CM4 (Compute Module 4)
-# ============================================================
 [cm4]
 otg_mode=1
-# uConsole-specific overlay (clockworkpi-uconsole-cm4)
+dtparam=pciex1
 dtoverlay=clockworkpi-uconsole-cm4
-# Example if you want to specify battery capacity:
-#dtoverlay=clockworkpi-uconsole-cm4,batt_uah=7000000,vnom_uv=3700000
-
-# KMS / GPU
 dtoverlay=vc4-kms-v3d-pi4,cma-384
-
-# Audio (GPIO12/13 PWM)
 dtoverlay=audremap,pins_12_13
 
-# Kernel (self-built ak-rex 6.12.y). No initramfs (mmc/ext4 are built-in).
-kernel=kernel8-cm4.img
+[cm5]
+dtparam=pciex1
+dtoverlay=dwc2,dr_mode=host
+dtoverlay=uconsole-cm5-base
+dtoverlay=uconsole-audio-cm5
+dtoverlay=vc4-kms-v3d
 
-# SD overclock (optional)
-#dtparam=sd_overclock=100
-
-# HackerGadgets AIO extension board (RTL-SDR/LoRa/GPS/RTC/USB hub) is optional:
-# build with AIO_BOARD=v1 or AIO_BOARD=v2 to append its overlays here. See README.
+[all]
+include uconsole-aio.txt

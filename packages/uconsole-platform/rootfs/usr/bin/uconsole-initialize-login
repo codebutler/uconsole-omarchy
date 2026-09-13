@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+state_file=/var/lib/sddm/state.conf
+if [[ -f "${state_file}" ]] && grep -qE '^User=.+$' "${state_file}"; then
+  exit 0
+fi
+id alarm >/dev/null
+install -d -o sddm -g sddm -m0750 /var/lib/sddm
+session_file=/usr/local/share/wayland-sessions/omarchy.desktop
+[[ -f "${session_file}" ]] || session_file=/usr/share/wayland-sessions/hyprland-uwsm.desktop
+[[ -f "${session_file}" ]]
+[[ ! -f "${state_file}" ]] || cp -a "${state_file}" "${state_file}.before-uconsole-init"
+printf '[Last]\nUser=alarm\nSession=%s\n' "${session_file}" > "${state_file}"
+chown sddm:sddm "${state_file}"
+chmod 0600 "${state_file}"

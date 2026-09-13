@@ -1,0 +1,44 @@
+# Maintainer: uconsole-archlinux contributors
+pkgname=uconsole-modules-linux-rpi
+_linux_pkgver="${UCONSOLE_KERNEL_PACKAGE_VERSION:-$(pacman -Q linux-rpi | awk '{print $2}')}"
+_kver="${UCONSOLE_KERNEL_RELEASE:-$(find /usr/lib/modules -mindepth 1 -maxdepth 1 -type d -exec test -e '{}/build' \; -print | sort -V | tail -1 | xargs basename)}"
+_build_dir="${UCONSOLE_KERNEL_BUILD_DIR:-/usr/lib/modules/${_kver}/build}"
+pkgver="${_linux_pkgver%%-*}"
+pkgrel="${_linux_pkgver##*-}.1"
+pkgdesc="Version-matched ClockworkPi uConsole drivers for Arch Linux ARM linux-rpi"
+arch=(aarch64)
+url="https://github.com/yota9/uconsole-cm5"
+license=(GPL-2.0-only)
+depends=("linux-rpi=${_linux_pkgver}")
+makedepends=("linux-rpi-headers=${_linux_pkgver}")
+options=(!strip)
+install=uconsole-modules-linux-rpi.install
+_commit=bf7a0ab55654c96b74d013520e1196d39f66391a
+source=("uconsole-cm5-${_commit}.tar.gz::https://github.com/yota9/uconsole-cm5/archive/${_commit}.tar.gz")
+sha256sums=('bd03be0b091354bf6a047ca41d0c8198f124d4a12e396647fd0b0f257a7ee4e9')
+
+prepare() {
+  [[ -n "${_kver}" && -e "${_build_dir}/Makefile" ]] || {
+    error "matching linux-rpi headers were not found"
+    return 1
+  }
+}
+
+build() {
+  make -C "${_build_dir}" \
+    M="${srcdir}/uconsole-cm5-${_commit}/dkms" \
+    modules
+}
+
+package() {
+  local src="${srcdir}/uconsole-cm5-${_commit}/dkms"
+  local dest="${pkgdir}/usr/lib/modules/${_kver}/updates/uconsole"
+  install -d "${dest}"
+  local module
+  for module in \
+    panel-cwu50 ocp8178_bl axp20x axp20x-i2c axp20x-regulator \
+    axp20x_battery axp20x_adc axp20x-pek snd-soc-simple-amplifier; do
+    install -m 0644 "${src}/${module}.ko" "${dest}/${module}.ko"
+  done
+  find "${dest}" -name '*.ko' -exec zstd -q -19 -T0 --rm {} +
+}

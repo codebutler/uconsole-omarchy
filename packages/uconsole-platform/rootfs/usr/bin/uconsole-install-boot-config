@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+template=/usr/share/uconsole/boot
+root_id="${1:-}"
+if [[ -z "${root_id}" && -r /boot/cmdline.txt ]]; then
+  root_id="$(sed -n 's/.*root=PARTUUID=\([^ ]*\).*/\1/p' /boot/cmdline.txt)"
+fi
+if [[ -z "${root_id}" ]]; then
+  root_id="$(findmnt -no PARTUUID -T / 2>/dev/null || true)"
+fi
+[[ -n "${root_id}" ]] || {
+  echo "uconsole-install-boot-config: root PARTUUID is unknown" >&2
+  exit 1
+}
+
+install -Dm0644 "${template}/config.txt" /boot/config.txt
+sed "s/@ROOT_PARTUUID@/${root_id}/g" "${template}/cmdline.txt" > /boot/cmdline.txt
+chmod 0644 /boot/cmdline.txt
+[[ -e /boot/uconsole-aio.txt ]] || install -m0644 "${template}/uconsole-aio.txt" /boot/uconsole-aio.txt

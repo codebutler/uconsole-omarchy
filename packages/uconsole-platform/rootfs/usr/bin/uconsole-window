@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Small, session-local additions to Hyprland's scrolling layout."""
+import argparse
+import fcntl
+import json
+import os
+from pathlib import Path
+import subprocess
+import time
+
+
+def query(command):
+    return json.loads(subprocess.check_output(["hyprctl", "-j", command], text=True))
+
+
+def dispatch(expression):
+    result = subprocess.check_output(["hyprctl", "dispatch", expression], text=True).strip()
+    if result != "ok":
+        raise RuntimeError(result)
+
+
+def logical_width(monitor):
+    axis = "height" if monitor.get("transform", 0) % 2 else "width"
+    reserved = monitor.get("reserved", [0, 0, 0, 0])
+    return monitor[axis] / monitor["scale"] - reserved[0] - reserved[2]
+
+
+def column_width(fraction):
+    window = query("activewindow")
+    if not window or window.get("floating") or window.get("fullscreen"):
+        return
+    monitor = next(m for m in query("monitors") if m["id"] == window["monitor"])
+    width = logical_width(monitor)
+    # The layout measures columns including borders/gaps. Re-measure after each
+    # resize, rather than accumulating errors or trusting animated geometry.
+    for _ in range(4):
+        current = query("activewindow")
+        if current.get("address") != window["address"]:
+            return  # Never resize a different window after a focus change.
+        delta = fraction - current["size"][0] / width
+        if abs(delta * width) < 3:
+            break
+        dispatch(f'hl.dsp.layout("colresize {delta:+.6f}")')
+        time.sleep(0.16)
+
+
+def scratchpad():
+    window = query("activewindow")
+    if not window:
+        return
+    monitor = next(m for m in query("monitors") if m["id"] == window["monitor"])
+    returning = window["workspace"]["name"] == "special:scratchpad"
+    target = str(monitor["activeWorkspace"]["id"]) if returning else "special:scratchpad"
+    dispatch("hl.dsp.window.move({workspace=" + json.dumps(target) + ", follow=false})")
+    # Stashing should leave the ordinary workspace visible. Do not blindly flip
+    # the special workspace: consult its actual state after the move.
+    refreshed = next(m for m in query("monitors") if m["id"] == monitor["id"])
+    if refreshed.get("specialWorkspace", {}).get("name") == "special:scratchpad":
+        dispatch('hl.dsp.workspace.toggle_special("scratchpad")')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=("width", "scratchpad"))
+    parser.add_argument("tenths", type=int, nargs="?", choices=range(1, 10))
+    args = parser.parse_args()
+    if args.action == "width" and args.tenths is None:
+        parser.error("width requires a number from 1 to 9")
+    # Inherit the compositor's instance, never guess the newest stale socket.
+    if not os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        parser.error("Run inside a Hyprland session")
+    with (Path(os.environ["XDG_RUNTIME_DIR"]) / "uconsole-window.lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if args.action == "width":
+            column_width(args.tenths / 10)
+        else:
+            scratchpad()
+
+
+if __name__ == "__main__":
+    main()

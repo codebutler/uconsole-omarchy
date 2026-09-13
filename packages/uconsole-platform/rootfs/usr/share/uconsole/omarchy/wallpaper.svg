@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#0e0f10"/>
+  <g fill="none" stroke="#26292a" stroke-width="1">
+    <path d="M48 144V672H1136M48 624H1232V48H144"/>
+    <path d="M1056 672h32m8 0h8m8 0h8m8 0h8"/>
+  </g>
+  <g fill="none" stroke="#ff6b1a" stroke-width="2">
+    <path d="M48 112V48h64M1168 672h64v-64"/>
+  </g>
+  <g fill="#5d625e" font-family="monospace" font-size="12" letter-spacing="3">
+    <text x="72" y="651">uCONSOLE / FIELD TERMINAL</text>
+  </g>
+</svg>

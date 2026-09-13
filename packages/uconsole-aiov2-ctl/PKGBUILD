@@ -1,0 +1,42 @@
+# Maintainer: uconsole-archlinux contributors
+pkgname=uconsole-aiov2-ctl
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="HackerGadgets AIO V2 controller, packaged safely for Arch Linux"
+arch=(any)
+url="https://github.com/HackerGadgets/aiov2_ctl"
+license=(MIT)
+depends=(python raspberrypi-utils)
+optdepends=('python-pyqt6: graphical tray controller')
+_commit=c21ca742775b32ecea30b334e15a2d7f003e511a
+source=(
+  "aiov2_ctl-${_commit}.tar.gz::https://github.com/HackerGadgets/aiov2_ctl/archive/${_commit}.tar.gz"
+  aiov2-rails-boot.service
+  90-aiov2.preset
+)
+sha256sums=(
+  '8efba395fb56ab1b21f6bfaa328452259a271ef8e705cd168eb64ead92b1e3ae'
+  SKIP
+  SKIP
+)
+
+prepare() {
+  cd "aiov2_ctl-${_commit}"
+  sed -i \
+    -e 's#/usr/local/bin/aiov2_ctl#/usr/bin/aiov2_ctl#g' \
+    -e 's#/usr/local/share/aiov2_ctl/config.json#/var/lib/aiov2_ctl/config.json#g' \
+    -e 's#/usr/local/share/aiov2_ctl#/usr/share/aiov2_ctl#g' \
+    aiov2_ctl.py
+}
+
+package() {
+  cd "aiov2_ctl-${_commit}"
+  install -Dm0755 aiov2_ctl.py "${pkgdir}/usr/bin/aiov2_ctl"
+  install -Dm0644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm0644 img/pcb-board.png "${pkgdir}/usr/share/aiov2_ctl/img/pcb-board.png"
+  install -Dm0644 "${srcdir}/aiov2-rails-boot.service" \
+    "${pkgdir}/usr/lib/systemd/system/aiov2-rails-boot.service"
+  install -Dm0644 "${srcdir}/90-aiov2.preset" \
+    "${pkgdir}/usr/lib/systemd/system-preset/90-aiov2.preset"
+  install -d "${pkgdir}/var/lib/aiov2_ctl"
+}

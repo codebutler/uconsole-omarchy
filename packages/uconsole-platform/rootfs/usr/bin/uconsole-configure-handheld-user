@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""Seed handheld defaults without replacing existing user configuration."""
+import argparse
+from pathlib import Path
+import subprocess
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--theme", action="store_true", help="Select the uConsole theme using native Omarchy")
+    args = parser.parse_args()
+    home = Path.home()
+    config = home / ".config/mpv/mpv.conf"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    include = "include=/usr/share/uconsole/mpv/mpv.conf"
+    existing = config.read_text() if config.exists() else ""
+    if include not in existing.splitlines():
+        # The user's later options override these defaults, never the reverse.
+        config.write_text(include + "\n" + existing)
+    if args.theme:
+        subprocess.run(["omarchy-theme-set", "uconsole"], check=True)
+
+
+if __name__ == "__main__":
+    main()

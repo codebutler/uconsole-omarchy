@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply explicitly saved HackerGadgets AIO V2 rail states
+ConditionPathExists=/var/lib/aiov2_ctl/config.json
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/aiov2_ctl --apply-boot-rails
+
+[Install]
+WantedBy=multi-user.target

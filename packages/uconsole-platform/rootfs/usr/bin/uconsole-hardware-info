@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+model="$(tr -d '\0' </proc/device-tree/model 2>/dev/null || echo unknown)"
+compatible="$(tr '\0' ' ' </proc/device-tree/compatible 2>/dev/null || true)"
+case "${compatible}" in
+  *bcm2712*) generation=cm5 ;;
+  *bcm2711*) generation=cm4 ;;
+  *) generation=unknown ;;
+esac
+printf 'model=%s\ngeneration=%s\nroot=%s\n' "${model}" "${generation}" "$(findmnt -no SOURCE -T /)"
+for dev in /dev/nvme*n1; do [[ -b "${dev}" ]] && printf 'nvme=%s\n' "${dev}"; done

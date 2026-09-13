@@ -18,3 +18,10 @@
 
 # Collected logs
 /logs/
+
+# Local inspection downloads and rendered diagnostics
+/tmp/
+
+# Python test caches
+__pycache__/
+*.py[cod]

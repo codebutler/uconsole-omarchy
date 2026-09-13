@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = omarchy
+Target = uconsole-platform
+
+[Action]
+Description = Apply uConsole small-screen Omarchy adaptations
+When = PostTransaction
+Exec = /usr/bin/uconsole-configure-omarchy-display

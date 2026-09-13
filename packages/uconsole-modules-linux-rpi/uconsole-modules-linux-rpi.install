@@ -1,0 +1,17 @@
+post_install() {
+  local path kver
+  for path in /usr/lib/modules/*/updates/uconsole; do
+    [ -d "${path}" ] || continue
+    kver="$(basename "$(dirname "$(dirname "${path}")")")"
+    depmod -a "${kver}"
+  done
+  command -v mkinitcpio >/dev/null && mkinitcpio -P
+}
+
+post_upgrade() {
+  post_install
+}
+
+post_remove() {
+  command -v mkinitcpio >/dev/null && mkinitcpio -P || true
+}

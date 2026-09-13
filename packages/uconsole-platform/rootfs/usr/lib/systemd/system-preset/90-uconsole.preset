@@ -1,0 +1,6 @@
+enable uconsole-resize-rootfs.service
+enable uconsole-speaker-amp.service
+enable uconsole-wifi-watchdog.timer
+enable uconsole-gamepad-keys.service
+enable chronyd.service
+enable uconsole-initialize-login.service

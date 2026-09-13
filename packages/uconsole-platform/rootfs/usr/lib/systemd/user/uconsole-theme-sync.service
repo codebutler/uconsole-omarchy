@@ -1,0 +1,13 @@
+[Unit]
+Description=Apply Omarchy theme accent to GTK and the appearance portal
+PartOf=graphical-session.target
+After=graphical-session-pre.target
+Before=xdg-desktop-portal-xapp.service
+
+[Service]
+Type=oneshot
+# Apply the native dark/light preference too, including first boot when dconf
+# has no saved preference. That script calls our accent sync after setting it.
+Environment=OMARCHY_PATH=/usr/share/omarchy
+Environment=PATH=/usr/share/omarchy/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/share/omarchy/bin/omarchy-theme-set-gnome

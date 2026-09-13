@@ -1,0 +1,2 @@
+# Safe because the service does nothing until the user creates rail state.
+enable aiov2-rails-boot.service

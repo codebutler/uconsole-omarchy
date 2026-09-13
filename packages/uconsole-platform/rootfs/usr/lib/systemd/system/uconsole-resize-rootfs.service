@@ -1,0 +1,13 @@
+[Unit]
+Description=Expand the image root filesystem to fill its storage device
+ConditionPathExists=/var/lib/uconsole/resize-rootfs.pending
+After=systemd-remount-fs.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/uconsole-resize-rootfs
+ExecStartPost=/usr/bin/rm -f /var/lib/uconsole/resize-rootfs.pending
+
+[Install]
+WantedBy=multi-user.target
